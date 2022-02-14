@@ -1,0 +1,28 @@
+commit 943df4f629560f5c33474dd82e2b534ea5f8653f
+Author: Michael Munday <mike.munday@ibm.com>
+Date:   Wed Oct 16 21:49:09 2019 +0100
+
+    crypto/ecdsa: remove s390x assembly
+    
+    This a revert of CL 174437 and follow up fix CL 201317.
+    
+    The s390x assembly in this package makes use of an instruction
+    (specifically KDSA) which is not supported by the current build
+    machine. Remove this assembly for now, we can revisit this
+    functionality once we have a newer build machine and can ensure
+    that this assembly is well tested.
+    
+    Updates #34927.
+    
+    Change-Id: I779286fa7d9530a254b53a515ee76b1218821f2f
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/201360
+    Run-TryBot: Michael Munday <mike.munday@ibm.com>
+    TryBot-Result: Gobot Gobot <gobot@golang.org>
+    Reviewed-by: Brad Fitzpatrick <bradfitz@golang.org>
+
+ src/crypto/ecdsa/ecdsa.go            |  16 +---
+ src/crypto/ecdsa/ecdsa_noasm.go      |  22 -----
+ src/crypto/ecdsa/ecdsa_s390x.go      | 153 -----------------------------------
+ src/crypto/ecdsa/ecdsa_s390x.s       |  31 -------
+ src/crypto/ecdsa/ecdsa_s390x_test.go |  33 --------
+ 5 files changed, 4 insertions(+), 251 deletions(-)

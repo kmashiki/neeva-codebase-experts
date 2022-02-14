@@ -1,0 +1,92 @@
+commit f229e7031a6efb2f23241b5da000c3b3203081d6
+Author: Russ Cox <rsc@golang.org>
+Date:   Wed Aug 25 12:48:26 2021 -0400
+
+    all: go fix -fix=buildtag std cmd (except for bootstrap deps, vendor)
+    
+    When these packages are released as part of Go 1.18,
+    Go 1.16 will no longer be supported, so we can remove
+    the +build tags in these files.
+    
+    Ran go fix -fix=buildtag std cmd and then reverted the bootstrapDirs
+    as defined in src/cmd/dist/buildtool.go, which need to continue
+    to build with Go 1.4 for now.
+    
+    Also reverted src/vendor and src/cmd/vendor, which will need
+    to be updated in their own repos first.
+    
+    Manual changes in runtime/pprof/mprof_test.go to adjust line numbers.
+    
+    For #41184.
+    
+    Change-Id: Ic0f93f7091295b6abc76ed5cd6e6746e1280861e
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/344955
+    Trust: Russ Cox <rsc@golang.org>
+    Run-TryBot: Russ Cox <rsc@golang.org>
+    TryBot-Result: Go Bot <gobot@golang.org>
+    Reviewed-by: Bryan C. Mills <bcmills@google.com>
+
+ src/crypto/ecdsa/ecdsa_noasm.go      | 1 -
+ src/crypto/ecdsa/ecdsa_s390x_test.go | 1 -
+ 2 files changed, 2 deletions(-)
+
+commit 4d8db00641cc9ff4f44de7df9b8c4f4a4f9416ee
+Author: Russ Cox <rsc@golang.org>
+Date:   Wed Sep 22 10:46:32 2021 -0400
+
+    all: use bytes.Cut, strings.Cut
+    
+    Many uses of Index/IndexByte/IndexRune/Split/SplitN
+    can be written more clearly using the new Cut functions.
+    Do that. Also rewrite to other functions if that's clearer.
+    
+    For #46336.
+    
+    Change-Id: I68d024716ace41a57a8bf74455c62279bde0f448
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/351711
+    Trust: Russ Cox <rsc@golang.org>
+    Run-TryBot: Russ Cox <rsc@golang.org>
+    TryBot-Result: Go Bot <gobot@golang.org>
+    Reviewed-by: Ian Lance Taylor <iant@golang.org>
+
+ src/crypto/ecdsa/ecdsa_test.go | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+commit d4b26382342c98a95b85140b2863bc30c48edd68
+Author: Russ Cox <rsc@golang.org>
+Date:   Fri Feb 19 18:35:10 2021 -0500
+
+    all: go fmt std cmd (but revert vendor)
+    
+    Make all our package sources use Go 1.17 gofmt format
+    (adding //go:build lines).
+    
+    Part of //go:build change (#41184).
+    See https://golang.org/design/draft-gobuild
+    
+    Change-Id: Ia0534360e4957e58cd9a18429c39d0e32a6addb4
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/294430
+    Trust: Russ Cox <rsc@golang.org>
+    Run-TryBot: Russ Cox <rsc@golang.org>
+    TryBot-Result: Go Bot <gobot@golang.org>
+    Reviewed-by: Jason A. Donenfeld <Jason@zx2c4.com>
+    Reviewed-by: Ian Lance Taylor <iant@golang.org>
+
+ src/crypto/ecdsa/ecdsa_noasm.go      | 1 +
+ src/crypto/ecdsa/ecdsa_s390x_test.go | 1 +
+ 2 files changed, 2 insertions(+)
+
+commit c007ce824d9a4fccb148f9204e04c23ed2984b71
+Author: Russ Cox <rsc@golang.org>
+Date:   Mon Sep 8 00:08:51 2014 -0400
+
+    build: move package sources from src/pkg to src
+    
+    Preparation was in CL 134570043.
+    This CL contains only the effect of 'hg mv src/pkg/* src'.
+    For more about the move, see golang.org/s/go14nopkg.
+
+ src/crypto/ecdsa/ecdsa.go                | 189 ++++++++++++++++++++++++++++++
+ src/crypto/ecdsa/ecdsa_test.go           | 191 +++++++++++++++++++++++++++++++
+ src/crypto/ecdsa/testdata/SigVer.rsp.bz2 | Bin 0 -> 95485 bytes
+ 3 files changed, 380 insertions(+)

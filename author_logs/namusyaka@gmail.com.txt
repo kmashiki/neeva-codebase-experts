@@ -1,0 +1,14 @@
+commit 5a986eca869773c4459b36dad434b97287d5d4f3
+Author: Kunpei Sakai <namusyaka@gmail.com>
+Date:   Fri Sep 15 10:24:47 2017 +0900
+
+    all: fix article typos
+    
+    a -> an
+    
+    Change-Id: I7362bdc199e83073a712be657f5d9ba16df3077e
+    Reviewed-on: https://go-review.googlesource.com/63850
+    Reviewed-by: Rob Pike <r@golang.org>
+
+ src/crypto/ecdsa/ecdsa.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)

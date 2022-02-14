@@ -1,0 +1,14 @@
+commit fdd0179bb1fdd70d405929b78c7d2fb6b61369b0
+Author: Martin Möhrmann <martisch@uos.de>
+Date:   Wed Feb 24 11:55:20 2016 +0100
+
+    all: fix typos and spelling
+    
+    Change-Id: Icd06d99c42b8299fd931c7da821e1f418684d913
+    Reviewed-on: https://go-review.googlesource.com/19829
+    Reviewed-by: Brad Fitzpatrick <bradfitz@golang.org>
+    Run-TryBot: Brad Fitzpatrick <bradfitz@golang.org>
+    TryBot-Result: Gobot Gobot <gobot@golang.org>
+
+ src/crypto/ecdsa/ecdsa_test.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)

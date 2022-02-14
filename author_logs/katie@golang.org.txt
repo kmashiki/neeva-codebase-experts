@@ -1,0 +1,24 @@
+commit 8c09e8af3633b0c08d2c309e56a58124dfee3d7c
+Author: Katie Hockman <katie@golang.org>
+Date:   Wed Feb 5 15:19:41 2020 -0500
+
+    crypto/ecdsa: add SignASN1, VerifyASN1
+    
+    Update the Example in the crypto/ecdsa package for signing
+    and verifying signatures to use these new functions.
+    
+    This also changes (*PrivateKey).Sign to use
+    x/crypto/cryptobyte/asn1 instead of encoding/asn1
+    to marshal the signature.
+    
+    Fixes #20544
+    
+    Change-Id: I3423cfc4d7f9e1748fbed5a631438c8a3b280df4
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/217940
+    TryBot-Result: Gobot Gobot <gobot@golang.org>
+    Reviewed-by: Filippo Valsorda <filippo@golang.org>
+
+ src/crypto/ecdsa/ecdsa.go        | 44 +++++++++++++++++++++++++++++++++-------
+ src/crypto/ecdsa/ecdsa_test.go   | 30 +++++++++++++++++++++++++++
+ src/crypto/ecdsa/example_test.go |  6 +++---
+ 3 files changed, 70 insertions(+), 10 deletions(-)

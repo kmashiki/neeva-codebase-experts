@@ -1,0 +1,12 @@
+commit cc6f5f6ce1daca51f475764a3e4fa9420cafcefa
+Author: Nick Harper <nharper@google.com>
+Date:   Wed Jun 29 11:18:01 2016 -0700
+
+    crypto/ecdsa: Update documentation for Sign
+    
+    Change-Id: I2b7a81cb809d109f10d5f0db957c614f466d6bfd
+    Reviewed-on: https://go-review.googlesource.com/24582
+    Reviewed-by: Adam Langley <agl@golang.org>
+
+ src/crypto/ecdsa/ecdsa.go | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)

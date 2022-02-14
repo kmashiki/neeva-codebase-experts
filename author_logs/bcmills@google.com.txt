@@ -1,0 +1,20 @@
+commit fb2a6343defa5259df3032fef771057843e799ce
+Author: Bryan C. Mills <bcmills@google.com>
+Date:   Mon Mar 23 20:38:00 2020 +0000
+
+    Revert "crypto/rsa,crypto/ecdsa,crypto/ed25519: implement PublicKey.Equal"
+    
+    This reverts CL 223754.
+    
+    Reason for revert: new tests are failing on all longtest builders.
+    
+    Change-Id: I2257d106c132f3a02c0af6b20061d4f9a8093c4f
+    Reviewed-on: https://go-review.googlesource.com/c/go/+/225077
+    Run-TryBot: Bryan C. Mills <bcmills@google.com>
+    Reviewed-by: Dmitri Shuralyov <dmitshur@golang.org>
+    Reviewed-by: Katie Hockman <katie@golang.org>
+    TryBot-Result: Gobot Gobot <gobot@golang.org>
+
+ src/crypto/ecdsa/ecdsa.go      | 18 ----------
+ src/crypto/ecdsa/equal_test.go | 77 ------------------------------------------
+ 2 files changed, 95 deletions(-)

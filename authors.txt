@@ -1,0 +1,22 @@
+     8	Russ Cox <rsc@golang.org>
+     7	Filippo Valsorda <filippo@golang.org>
+     7	Adam Langley <agl@golang.org>
+     4	Brad Fitzpatrick <bradfitz@golang.org>
+     2	bill_ofarrell <billo@ca.ibm.com>
+     2	David Leon Gil <coruus@gmail.com>
+     2	Michael Munday <mike.munday@ibm.com>
+     2	Mostyn Bramley-Moore <mostyn@antipode.se>
+     2	Ruixin Bao <ruixin.bao@ibm.com>
+     1	Ilya Tocar <ilya.tocar@intel.com>
+     1	Kunpei Sakai <namusyaka@gmail.com>
+     1	Martin Möhrmann <martisch@uos.de>
+     1	Tim Cooper <tim.cooper@layeh.com>
+     1	Vlad Krasnov <vlad@cloudflare.com>
+     1	Nick Harper <nharper@google.com>
+     1	Phil Pearl <philip.j.r.pearl@gmail.com>
+     1	Rob Pike <r@golang.org>
+     1	Bryan C. Mills <bcmills@google.com>
+     1	Dmitry Savintsev <dsavints@gmail.com>
+     1	Ethan Miller <eamiller@us.ibm.com>
+     1	Gerasimos (Makis) Maropoulos <kataras2006@hotmail.com>
+     1	Katie Hockman <katie@golang.org>

@@ -1,0 +1,28 @@
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  1) // Copyright 2020 The Go Authors. All rights reserved.
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  2) // Use of this source code is governed by a BSD-style
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  3) // license that can be found in the LICENSE file.
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  4) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  5) #include "textflag.h"
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  6) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  7) // func kdsa(fc uint64, params *[4096]byte) (errn uint64)
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  8) TEXT ·kdsa(SB), NOSPLIT|NOFRAME, $0-24
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400  9) 	MOVD fc+0(FP), R0     // function code
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 10) 	MOVD params+8(FP), R1 // address parameter block
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 11) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 12) loop:
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 13) 	WORD $0xB93A0008 // compute digital signature authentication
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 14) 	BVS  loop        // branch back if interrupted
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 15) 	BGT  retry       // signing unsuccessful, but retry with new CSPRN
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 16) 	BLT  error       // condition code of 1 indicates a failure
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 17) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 18) success:
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 19) 	MOVD $0, errn+16(FP) // return 0 - sign/verify was successful
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 20) 	RET
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 21) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 22) error:
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 23) 	MOVD $1, errn+16(FP) // return 1 - sign/verify failed
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 24) 	RET
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 25) 
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 26) retry:
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 27) 	MOVD $2, errn+16(FP) // return 2 - sign/verify was unsuccessful -- if sign, retry with new RN
+a637ee1970a (<ruixin.bao@ibm.com> 2020-04-15 16:50:50 -0400 28) 	RET

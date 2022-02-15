@@ -1,0 +1,401 @@
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   1) // Copyright 2011 The Go Authors. All rights reserved.
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   2) // Use of this source code is governed by a BSD-style
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   3) // license that can be found in the LICENSE file.
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   4) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   5) package ecdsa
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   6) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500   7) import (
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400   8) 	"bufio"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400   9) 	"compress/bzip2"
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  10) 	"crypto/elliptic"
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  11) 	"crypto/rand"
+965845a86d0 src/pkg/crypto/ecdsa/ecdsa_test.go (<rsc@golang.org>       2011-11-02 15:54:16 -0400  12) 	"crypto/sha1"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  13) 	"crypto/sha256"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  14) 	"crypto/sha512"
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  15) 	"encoding/hex"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  16) 	"hash"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  17) 	"io"
+30aa701fec9 src/pkg/crypto/ecdsa/ecdsa_test.go (<r@golang.org>         2011-11-08 15:40:58 -0800  18) 	"math/big"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  19) 	"os"
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400  20) 	"strings"
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  21) 	"testing"
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  22) )
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  23) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  24) func testAllCurves(t *testing.T, f func(*testing.T, elliptic.Curve)) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  25) 	tests := []struct {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  26) 		name  string
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  27) 		curve elliptic.Curve
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  28) 	}{
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  29) 		{"P256", elliptic.P256()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  30) 		{"P224", elliptic.P224()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  31) 		{"P384", elliptic.P384()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  32) 		{"P521", elliptic.P521()},
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  33) 	}
+d406f8f650f src/pkg/crypto/ecdsa/ecdsa_test.go (<r@golang.org>         2011-03-25 14:50:44 -0700  34) 	if testing.Short() {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  35) 		tests = tests[:1]
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  36) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  37) 	for _, test := range tests {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  38) 		curve := test.curve
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  39) 		t.Run(test.name, func(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  40) 			t.Parallel()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  41) 			f(t, curve)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  42) 		})
+d406f8f650f src/pkg/crypto/ecdsa/ecdsa_test.go (<r@golang.org>         2011-03-25 14:50:44 -0700  43) 	}
+49551472918 src/crypto/ecdsa/ecdsa_test.go     (<eamiller@us.ibm.com>  2016-08-12 13:45:50 -0500  44) }
+49551472918 src/crypto/ecdsa/ecdsa_test.go     (<eamiller@us.ibm.com>  2016-08-12 13:45:50 -0500  45) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  46) func TestKeyGeneration(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  47) 	testAllCurves(t, testKeyGeneration)
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  48) }
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  49) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  50) func testKeyGeneration(t *testing.T, c elliptic.Curve) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  51) 	priv, err := GenerateKey(c, rand.Reader)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  52) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  53) 		t.Fatal(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  54) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  55) 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  56) 		t.Errorf("public key invalid: %s", err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  57) 	}
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  58) }
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  59) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  60) func TestSignAndVerify(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  61) 	testAllCurves(t, testSignAndVerify)
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  62) }
+7bacfc640fb src/crypto/ecdsa/ecdsa_test.go     (<vlad@cloudflare.com>  2015-04-17 06:10:35 -0700  63) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  64) func testSignAndVerify(t *testing.T, c elliptic.Curve) {
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  65) 	priv, _ := GenerateKey(c, rand.Reader)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  66) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  67) 	hashed := []byte("testing")
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  68) 	r, s, err := Sign(rand.Reader, priv, hashed)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  69) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  70) 		t.Errorf("error signing: %s", err)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  71) 		return
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  72) 	}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  73) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  74) 	if !Verify(&priv.PublicKey, hashed, r, s) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  75) 		t.Errorf("Verify failed")
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  76) 	}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  77) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  78) 	hashed[0] ^= 0xff
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  79) 	if Verify(&priv.PublicKey, hashed, r, s) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  80) 		t.Errorf("Verify always works!")
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  81) 	}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  82) }
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  83) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  84) func TestSignAndVerifyASN1(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  85) 	testAllCurves(t, testSignAndVerifyASN1)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  86) }
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500  87) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  88) func testSignAndVerifyASN1(t *testing.T, c elliptic.Curve) {
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  89) 	priv, _ := GenerateKey(c, rand.Reader)
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  90) 
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  91) 	hashed := []byte("testing")
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  92) 	sig, err := SignASN1(rand.Reader, priv, hashed)
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  93) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  94) 		t.Errorf("error signing: %s", err)
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  95) 		return
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  96) 	}
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  97) 
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500  98) 	if !VerifyASN1(&priv.PublicKey, hashed, sig) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400  99) 		t.Errorf("VerifyASN1 failed")
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 100) 	}
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 101) 
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 102) 	hashed[0] ^= 0xff
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 103) 	if VerifyASN1(&priv.PublicKey, hashed, sig) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 104) 		t.Errorf("VerifyASN1 always works!")
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 105) 	}
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 106) }
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 107) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 108) func TestNonceSafety(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 109) 	testAllCurves(t, testNonceSafety)
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 110) }
+8c09e8af363 src/crypto/ecdsa/ecdsa_test.go     (<katie@golang.org>     2020-02-05 15:19:41 -0500 111) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 112) func testNonceSafety(t *testing.T, c elliptic.Curve) {
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 113) 	priv, _ := GenerateKey(c, rand.Reader)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 114) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 115) 	hashed := []byte("testing")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 116) 	r0, s0, err := Sign(zeroReader, priv, hashed)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 117) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 118) 		t.Errorf("error signing: %s", err)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 119) 		return
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 120) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 121) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 122) 	hashed = []byte("testing...")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 123) 	r1, s1, err := Sign(zeroReader, priv, hashed)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 124) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 125) 		t.Errorf("error signing: %s", err)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 126) 		return
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 127) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 128) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 129) 	if s0.Cmp(s1) == 0 {
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 130) 		// This should never happen.
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 131) 		t.Errorf("the signatures on two different messages were the same")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 132) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 133) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 134) 	if r0.Cmp(r1) == 0 {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 135) 		t.Errorf("the nonce used for two different messages was the same")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 136) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 137) }
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 138) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 139) func TestINDCCA(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 140) 	testAllCurves(t, testINDCCA)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 141) }
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 142) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 143) func testINDCCA(t *testing.T, c elliptic.Curve) {
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 144) 	priv, _ := GenerateKey(c, rand.Reader)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 145) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 146) 	hashed := []byte("testing")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 147) 	r0, s0, err := Sign(rand.Reader, priv, hashed)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 148) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 149) 		t.Errorf("error signing: %s", err)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 150) 		return
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 151) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 152) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 153) 	r1, s1, err := Sign(rand.Reader, priv, hashed)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 154) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 155) 		t.Errorf("error signing: %s", err)
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 156) 		return
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 157) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 158) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 159) 	if s0.Cmp(s1) == 0 {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 160) 		t.Errorf("two signatures of the same message produced the same result")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 161) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 162) 
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 163) 	if r0.Cmp(r1) == 0 {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 164) 		t.Errorf("two signatures of the same message produced the same nonce")
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 165) 	}
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 166) }
+a8049f58f9e src/crypto/ecdsa/ecdsa_test.go     (<coruus@gmail.com>     2015-01-26 23:00:21 -0800 167) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 168) func fromHex(s string) *big.Int {
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 169) 	r, ok := new(big.Int).SetString(s, 16)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 170) 	if !ok {
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 171) 		panic("bad hex")
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 172) 	}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 173) 	return r
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 174) }
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 175) 
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 176) func TestVectors(t *testing.T) {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 177) 	// This test runs the full set of NIST test vectors from
+161874da2ab src/crypto/ecdsa/ecdsa_test.go     (<tim.cooper@layeh.com> 2018-06-01 17:29:59 -0300 178) 	// https://csrc.nist.gov/groups/STM/cavp/documents/dss/186-3ecdsatestvectors.zip
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 179) 	//
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 180) 	// The SigVer.rsp file has been edited to remove test vectors for
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 181) 	// unsupported algorithms and has been compressed.
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 182) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 183) 	if testing.Short() {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 184) 		return
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 185) 	}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 186) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 187) 	f, err := os.Open("testdata/SigVer.rsp.bz2")
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 188) 	if err != nil {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 189) 		t.Fatal(err)
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 190) 	}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 191) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 192) 	buf := bufio.NewReader(bzip2.NewReader(f))
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 193) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 194) 	lineNo := 1
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 195) 	var h hash.Hash
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 196) 	var msg []byte
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 197) 	var hashed []byte
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 198) 	var r, s *big.Int
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 199) 	pub := new(PublicKey)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 200) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 201) 	for {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 202) 		line, err := buf.ReadString('\n')
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 203) 		if len(line) == 0 {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 204) 			if err == io.EOF {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 205) 				break
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 206) 			}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 207) 			t.Fatalf("error reading from input: %s", err)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 208) 		}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 209) 		lineNo++
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 210) 		// Need to remove \r\n from the end of the line.
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 211) 		if !strings.HasSuffix(line, "\r\n") {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 212) 			t.Fatalf("bad line ending (expected \\r\\n) on line %d", lineNo)
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 213) 		}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 214) 		line = line[:len(line)-2]
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 215) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 216) 		if len(line) == 0 || line[0] == '#' {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 217) 			continue
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 218) 		}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 219) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 220) 		if line[0] == '[' {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 221) 			line = line[1 : len(line)-1]
+4d8db00641c src/crypto/ecdsa/ecdsa_test.go     (<rsc@golang.org>       2021-09-22 10:46:32 -0400 222) 			curve, hash, _ := strings.Cut(line, ",")
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 223) 
+4d8db00641c src/crypto/ecdsa/ecdsa_test.go     (<rsc@golang.org>       2021-09-22 10:46:32 -0400 224) 			switch curve {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 225) 			case "P-224":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 226) 				pub.Curve = elliptic.P224()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 227) 			case "P-256":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 228) 				pub.Curve = elliptic.P256()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 229) 			case "P-384":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 230) 				pub.Curve = elliptic.P384()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 231) 			case "P-521":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 232) 				pub.Curve = elliptic.P521()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 233) 			default:
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 234) 				pub.Curve = nil
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 235) 			}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 236) 
+4d8db00641c src/crypto/ecdsa/ecdsa_test.go     (<rsc@golang.org>       2021-09-22 10:46:32 -0400 237) 			switch hash {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 238) 			case "SHA-1":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 239) 				h = sha1.New()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 240) 			case "SHA-224":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 241) 				h = sha256.New224()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 242) 			case "SHA-256":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 243) 				h = sha256.New()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 244) 			case "SHA-384":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 245) 				h = sha512.New384()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 246) 			case "SHA-512":
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 247) 				h = sha512.New()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 248) 			default:
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 249) 				h = nil
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 250) 			}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 251) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 252) 			continue
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 253) 		}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 254) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 255) 		if h == nil || pub.Curve == nil {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 256) 			continue
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 257) 		}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 258) 
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 259) 		switch {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 260) 		case strings.HasPrefix(line, "Msg = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 261) 			if msg, err = hex.DecodeString(line[6:]); err != nil {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 262) 				t.Fatalf("failed to decode message on line %d: %s", lineNo, err)
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 263) 			}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 264) 		case strings.HasPrefix(line, "Qx = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 265) 			pub.X = fromHex(line[5:])
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 266) 		case strings.HasPrefix(line, "Qy = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 267) 			pub.Y = fromHex(line[5:])
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 268) 		case strings.HasPrefix(line, "R = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 269) 			r = fromHex(line[4:])
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 270) 		case strings.HasPrefix(line, "S = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 271) 			s = fromHex(line[4:])
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 272) 		case strings.HasPrefix(line, "Result = "):
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 273) 			expected := line[9] == 'P'
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 274) 			h.Reset()
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 275) 			h.Write(msg)
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 276) 			hashed := h.Sum(hashed[:0])
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 277) 			if Verify(pub, hashed, r, s) != expected {
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 278) 				t.Fatalf("incorrect result on line %d", lineNo)
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 279) 			}
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 280) 		default:
+5759c6022c7 src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2012-05-22 10:33:14 -0400 281) 			t.Fatalf("unknown variable on line %d: %s", lineNo, line)
+d406f8f650f src/pkg/crypto/ecdsa/ecdsa_test.go (<r@golang.org>         2011-03-25 14:50:44 -0700 282) 		}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 283) 	}
+f422242065d src/pkg/crypto/ecdsa/ecdsa_test.go (<agl@golang.org>       2011-03-10 09:42:34 -0500 284) }
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 285) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 286) func TestNegativeInputs(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 287) 	testAllCurves(t, testNegativeInputs)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 288) }
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 289) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 290) func testNegativeInputs(t *testing.T, curve elliptic.Curve) {
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 291) 	key, err := GenerateKey(curve, rand.Reader)
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 292) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 293) 		t.Errorf("failed to generate key")
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 294) 	}
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 295) 
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 296) 	var hash [32]byte
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 297) 	r := new(big.Int).SetInt64(1)
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 298) 	r.Lsh(r, 550 /* larger than any supported curve */)
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 299) 	r.Neg(r)
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 300) 
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 301) 	if Verify(&key.PublicKey, hash[:], r, r) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 302) 		t.Errorf("bogus signature accepted")
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 303) 	}
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 304) }
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 305) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 306) func TestZeroHashSignature(t *testing.T) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 307) 	testAllCurves(t, testZeroHashSignature)
+b30fcbc9f59 src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2016-04-14 13:52:56 -0700 308) }
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 309) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 310) func testZeroHashSignature(t *testing.T, curve elliptic.Curve) {
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 311) 	zeroHash := make([]byte, 64)
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 312) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 313) 	privKey, err := GenerateKey(curve, rand.Reader)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 314) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 315) 		panic(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 316) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 317) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 318) 	// Sign a hash consisting of all zeros.
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 319) 	r, s, err := Sign(rand.Reader, privKey, zeroHash)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 320) 	if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 321) 		panic(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 322) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 323) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 324) 	// Confirm that it can be verified.
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 325) 	if !Verify(&privKey.PublicKey, zeroHash, r, s) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 326) 		t.Errorf("zero hash signature verify failed for %T", curve)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 327) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 328) }
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 329) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 330) func benchmarkAllCurves(t *testing.B, f func(*testing.B, elliptic.Curve)) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 331) 	tests := []struct {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 332) 		name  string
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 333) 		curve elliptic.Curve
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 334) 	}{
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 335) 		{"P256", elliptic.P256()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 336) 		{"P224", elliptic.P224()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 337) 		{"P384", elliptic.P384()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 338) 		{"P521", elliptic.P521()},
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 339) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 340) 	for _, test := range tests {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 341) 		curve := test.curve
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 342) 		t.Run(test.name, func(t *testing.B) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 343) 			f(t, curve)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 344) 		})
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 345) 	}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 346) }
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 347) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 348) func BenchmarkSign(b *testing.B) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 349) 	benchmarkAllCurves(b, func(b *testing.B, curve elliptic.Curve) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 350) 		priv, err := GenerateKey(curve, rand.Reader)
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 351) 		if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 352) 			b.Fatal(err)
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 353) 		}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 354) 		hashed := []byte("testing")
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 355) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 356) 		b.ReportAllocs()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 357) 		b.ResetTimer()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 358) 		for i := 0; i < b.N; i++ {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 359) 			sig, err := SignASN1(rand.Reader, priv, hashed)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 360) 			if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 361) 				b.Fatal(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 362) 			}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 363) 			// Prevent the compiler from optimizing out the operation.
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 364) 			hashed[0] = sig[0]
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 365) 		}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 366) 	})
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 367) }
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 368) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 369) func BenchmarkVerify(b *testing.B) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 370) 	benchmarkAllCurves(b, func(b *testing.B, curve elliptic.Curve) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 371) 		priv, err := GenerateKey(curve, rand.Reader)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 372) 		if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 373) 			b.Fatal(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 374) 		}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 375) 		hashed := []byte("testing")
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 376) 		r, s, err := Sign(rand.Reader, priv, hashed)
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 377) 		if err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 378) 			b.Fatal(err)
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 379) 		}
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 380) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 381) 		b.ReportAllocs()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 382) 		b.ResetTimer()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 383) 		for i := 0; i < b.N; i++ {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 384) 			if !Verify(&priv.PublicKey, hashed, r, s) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 385) 				b.Fatal("verify failed")
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 386) 			}
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 387) 		}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 388) 	})
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 389) }
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 390) 
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 391) func BenchmarkGenerateKey(b *testing.B) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 392) 	benchmarkAllCurves(b, func(b *testing.B, curve elliptic.Curve) {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 393) 		b.ReportAllocs()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 394) 		b.ResetTimer()
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 395) 		for i := 0; i < b.N; i++ {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 396) 			if _, err := GenerateKey(curve, rand.Reader); err != nil {
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 397) 				b.Fatal(err)
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 398) 			}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 399) 		}
+1108cbe60b8 src/crypto/ecdsa/ecdsa_test.go     (<filippo@golang.org>   2021-04-30 23:10:26 -0400 400) 	})
+2d69e9e259e src/crypto/ecdsa/ecdsa_test.go     (<agl@golang.org>       2017-05-03 18:20:12 -0700 401) }

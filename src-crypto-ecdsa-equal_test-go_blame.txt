@@ -1,0 +1,75 @@
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  1) // Copyright 2020 The Go Authors. All rights reserved.
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  2) // Use of this source code is governed by a BSD-style
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  3) // license that can be found in the LICENSE file.
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  4) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  5) package ecdsa_test
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  6) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  7) import (
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  8) 	"crypto"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400  9) 	"crypto/ecdsa"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 10) 	"crypto/elliptic"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 11) 	"crypto/rand"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 12) 	"crypto/x509"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 13) 	"testing"
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 14) )
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 15) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 16) func testEqual(t *testing.T, c elliptic.Curve) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 17) 	private, _ := ecdsa.GenerateKey(c, rand.Reader)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 18) 	public := &private.PublicKey
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 19) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 20) 	if !public.Equal(public) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 21) 		t.Errorf("public key is not equal to itself: %v", public)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 22) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 23) 	if !public.Equal(crypto.Signer(private).Public().(*ecdsa.PublicKey)) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 24) 		t.Errorf("private.Public() is not Equal to public: %q", public)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 25) 	}
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 26) 	if !private.Equal(private) {
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 27) 		t.Errorf("private key is not equal to itself: %v", private)
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 28) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 29) 
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 30) 	enc, err := x509.MarshalPKCS8PrivateKey(private)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 31) 	if err != nil {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 32) 		t.Fatal(err)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 33) 	}
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 34) 	decoded, err := x509.ParsePKCS8PrivateKey(enc)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 35) 	if err != nil {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 36) 		t.Fatal(err)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 37) 	}
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 38) 	if !public.Equal(decoded.(crypto.Signer).Public()) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 39) 		t.Errorf("public key is not equal to itself after decoding: %v", public)
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 40) 	}
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 41) 	if !private.Equal(decoded) {
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 42) 		t.Errorf("private key is not equal to itself after decoding: %v", private)
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 43) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 44) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 45) 	other, _ := ecdsa.GenerateKey(c, rand.Reader)
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 46) 	if public.Equal(other.Public()) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 47) 		t.Errorf("different public keys are Equal")
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 48) 	}
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 49) 	if private.Equal(other) {
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 50) 		t.Errorf("different private keys are Equal")
+a8e83d51a0c (<filippo@golang.org> 2020-04-30 23:52:48 -0400 51) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 52) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 53) 	// Ensure that keys with the same coordinates but on different curves
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 54) 	// aren't considered Equal.
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 55) 	differentCurve := &ecdsa.PublicKey{}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 56) 	*differentCurve = *public // make a copy of the public key
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 57) 	if differentCurve.Curve == elliptic.P256() {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 58) 		differentCurve.Curve = elliptic.P224()
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 59) 	} else {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 60) 		differentCurve.Curve = elliptic.P256()
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 61) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 62) 	if public.Equal(differentCurve) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 63) 		t.Errorf("public keys with different curves are Equal")
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 64) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 65) }
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 66) 
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 67) func TestEqual(t *testing.T) {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 68) 	t.Run("P224", func(t *testing.T) { testEqual(t, elliptic.P224()) })
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 69) 	if testing.Short() {
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 70) 		return
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 71) 	}
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 72) 	t.Run("P256", func(t *testing.T) { testEqual(t, elliptic.P256()) })
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 73) 	t.Run("P384", func(t *testing.T) { testEqual(t, elliptic.P384()) })
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 74) 	t.Run("P521", func(t *testing.T) { testEqual(t, elliptic.P521()) })
+b5f2c0f5029 (<filippo@golang.org> 2020-03-17 20:34:51 -0400 75) }

@@ -4,8 +4,15 @@ import subprocess
 from datetime import datetime
 import numpy as np
 import operator
+from collections import OrderedDict
+import json
 
 GOLANG_GIT_REPO = "https://github.com/golang/go.git"
+
+
+#############################################
+########## Parse Functions (Blame) ##########
+#############################################
 
 def get_current_contributions_per_author(directory):
     files_in_dir = get_files_in_directory(directory)
@@ -40,24 +47,23 @@ def get_current_contributions_per_author(directory):
                         blame_by_author_obj[email]['num_lines_comments_contributed'][year] += is_comment(line)
                     else:
                         blame_by_author_obj[email]['num_lines_comments_contributed'][year] = is_comment(line)
+                    
+                    if file_name not in blame_by_author_obj[email]['files_touched']:
+                        blame_by_author_obj[email]['files_touched'].append(file_name)
 
                 else:
                     blame_by_author_obj[email] = {
                         'num_lines_contributed': {year: 1},
                         'num_lines_code_contributed': {year: is_code(line)},
-                        'num_lines_comments_contributed': {year: is_comment(line)}
+                        'num_lines_comments_contributed': {year: is_comment(line)},
+                        'files_touched': [file_name]
                     }
 
     return blame_by_author_obj
 
-def is_comment(line):
-    index_close_paren = line.find(')')
-    line = line[index_close_paren + 1:].strip()
-    
-    return 1 if line.startswith('//') else 0
-
-def is_code(line):
-    return int(not is_comment(line))
+###########################################
+########## Parse Functions (Log) ##########
+###########################################
 
 def get_authors_for_directory(directory):
     # store authors in text file
@@ -161,6 +167,23 @@ def parse_log_text_to_object(author, directory):
     
     return current_author_commits
 
+
+######################################
+########## Helper Functions ##########
+######################################
+
+def is_comment(line):
+    index_close_paren = line.find(')')
+    line = line[index_close_paren + 1:].strip()
+    
+    return 1 if line.startswith('//') else 0
+
+def is_code(line):
+    return int(not is_comment(line))
+
+def parse_log_value(line, substring):
+    return line[len(substring):].strip()
+
 def get_files_in_directory(directory):
     files_in_dir = []
 
@@ -169,10 +192,6 @@ def get_files_in_directory(directory):
             files_in_dir.append(os.path.join(r, item)[3:])
     
     return files_in_dir
-
-
-def parse_log_value(line, substring):
-    return line[len(substring):].strip()
 
 def parse_email(line):
     index_less_than = line.find("<")
@@ -183,28 +202,43 @@ def parse_year(line):
     dash_index = line.find("-")
     return line[: dash_index][-4:]
 
+def normalize_dictionary(dict):
+    factor = 1.0 / sum(dict.itervalues())
+    for k, v in dict.items():
+        dict[k] = v * factor
+    
+    return dict
+
+def sort_dict_by_value(d):
+    sorted_tuples = reversed(sorted(d.items(), key=lambda item: item[1]))
+    sorted_dict = OrderedDict()
+    for k, v in sorted_tuples:
+        sorted_dict[k] = v
+
+    return sorted_dict
+
+
+#################################################
+########## Heuristic Functions (Blame) ##########
+#################################################
+
 def get_blame_metrics(blame_by_author_obj):
     num_lines_contributed_by_author_stats = get_percent_current_code_by_author(blame_by_author_obj, 'num_lines_contributed')
-    num_lines_code_contributed_by_author_stats = get_percent_current_code_by_author(blame_by_author_obj, 'num_lines_code_contributed')
-    num_lines_comments_contributed_by_author_stats = get_percent_current_code_by_author(blame_by_author_obj, 'num_lines_comments_contributed')
+    score_current_code_by_author_and_recency = get_score_current_code_by_author_and_recency(blame_by_author_obj, 'num_lines_contributed')
+    percent_files_touched_by_author = get_percent_files_touched_by_author(blame_by_author_obj)
 
-    print(sorted(num_lines_contributed_by_author_stats)[0])
-    print(sorted(num_lines_code_contributed_by_author_stats)[0])
-    print(sorted(num_lines_comments_contributed_by_author_stats)[0])
+    final_blame_score_by_author = {}
+    for a in blame_by_author_obj.keys():
+        final_blame_score_by_author[a] = num_lines_contributed_by_author_stats[a] + score_current_code_by_author_and_recency[a] + percent_files_touched_by_author[a]
 
-    num_lines_contributed__by_year_stats = get_percent_current_code_by_year(blame_by_author_obj, 'num_lines_contributed')
-    print(num_lines_contributed__by_year_stats)
+    return final_blame_score_by_author
 
 def get_percent_current_code_by_author(blame_by_author_obj, contribution_type):
+    total_lines_in_directory = get_total_lines_in_directory(blame_by_author_obj, contribution_type)
+
     num_lines_by_author_obj = {}
-    
-    # total_lines_contributed_by_author_obj = {}
-    # total_code_contributed_by_author_obj = {}
-    # total_comments_contributed_by_author_obj = {}
     for a, obj in blame_by_author_obj.items():
         num_lines_by_author_obj[a] = sum(value for year, value in obj[contribution_type].items())
-    
-    total_lines_in_directory = sum(v for k, v in num_lines_by_author_obj.items())
 
     percent_lines_by_author_obj = {}
     for k, v in num_lines_by_author_obj.items():
@@ -212,9 +246,51 @@ def get_percent_current_code_by_author(blame_by_author_obj, contribution_type):
     
     return percent_lines_by_author_obj
 
+def get_score_current_code_by_author_and_recency(blame_by_author_obj, contribution_type):
+    average_contribution_year = int(get_average_contribution_year(blame_by_author_obj, contribution_type))
 
-#### WIP
-def get_percent_current_code_by_year(blame_by_author_obj, contribution_type):
+    score_by_author_obj = {}
+    for a, obj in blame_by_author_obj.items():
+        curr_author_sum = 0
+        for year, value in obj[contribution_type].items():
+            curr_author_sum += value * (1 if int(year) >= average_contribution_year else 0.5)
+        score_by_author_obj[a] = curr_author_sum
+    
+    return normalize_dictionary(score_by_author_obj)
+
+def get_percent_files_touched_by_author(blame_by_author_obj):
+    score_by_author_obj = {}
+    num_files_in_dir = float(len(get_files_in_directory(DIRECTORY)))
+    for a, obj in blame_by_author_obj.items():
+        score_by_author_obj[a] = len(obj['files_touched']) / num_files_in_dir
+    
+    return score_by_author_obj
+
+def get_average_contribution_year(blame_by_author_obj, contribution_type):
+    half_num_lines_in_directory = get_total_lines_in_directory(blame_by_author_obj, contribution_type) / 2
+    num_contributions_by_year = get_num_contributions_by_year(blame_by_author_obj, contribution_type)
+    num_contributions_by_year = OrderedDict(sorted(num_contributions_by_year.items()))
+    
+    average_contribution_year = None
+    for k, v in num_contributions_by_year.iteritems():
+        half_num_lines_in_directory -= v
+        if half_num_lines_in_directory <= 0:
+            average_contribution_year = k
+            break
+
+    return average_contribution_year
+
+def get_total_lines_in_directory(blame_by_author_obj, contribution_type):
+    num_lines_by_author_obj = {}
+
+    for a, obj in blame_by_author_obj.items():
+        num_lines_by_author_obj[a] = sum(value for year, value in obj[contribution_type].items())
+    
+    total_lines_in_directory = sum(v for k, v in num_lines_by_author_obj.items())
+
+    return total_lines_in_directory
+
+def get_num_contributions_by_year(blame_by_author_obj, contribution_type):
     num_contributions_by_year = {}
     for author, stats in blame_by_author_obj.items():
         for year, num in stats[contribution_type].items():
@@ -225,6 +301,28 @@ def get_percent_current_code_by_year(blame_by_author_obj, contribution_type):
 
     return num_contributions_by_year
 
+###############################################
+########## Heuristic Functions (Log) ##########
+###############################################
+
+def get_log_metrics(logs_by_author_obj):
+    final_log_score_by_author = {}
+
+    for a in logs_by_author_obj.keys():
+        final_log_score_by_author[a] = 0
+
+    # TO DO    
+    # num total commits
+    # % commits made in last 12 months
+    # num insertions + (0.5 * num deletions)
+    # avg num lines in commit message -- consider setting scalar to 0
+
+    return final_log_score_by_author
+
+
+#########################
+########## CLI ##########
+#########################
 
 @click.command()
 @click.option("--directory", help="Directory name, relative to the root of the Go source git tree")
@@ -234,7 +332,9 @@ def expert(directory, print_logs):
     Given a git repository, determines the top 3 experts for a given directory
     within the Golang git repo."""
 
-    click.echo(directory)
+    global DIRECTORY
+    DIRECTORY = directory
+    click.echo(DIRECTORY)
 
     global PRINT_LOGS
     PRINT_LOGS = False
@@ -249,7 +349,20 @@ def expert(directory, print_logs):
     # print(logs_by_author_obj)
     # print(blame_by_author_obj)
     
-    get_blame_metrics(blame_by_author_obj)
+    final_blame_score_by_author = get_blame_metrics(blame_by_author_obj)
+    final_log_score_by_author = get_log_metrics(logs_by_author_obj)
+
+    score_by_author = {}
+    for a in final_log_score_by_author.keys():
+        score_by_author[a] = final_blame_score_by_author.get(a, 0) + final_log_score_by_author.get(a)
+    
+    score_by_author = sort_dict_by_value(score_by_author)
+
+    print(score_by_author)
+
+    for k, v in score_by_author.items()[:3]:
+        print("{} {}".format(k, round(v, 2)))
+
 
 if __name__ == '__main__':
     expert()

@@ -103,8 +103,10 @@ def get_logs_for_authors(authors, directory):
     for a in authors:
         if PRINT_LOGS:
             print(f'Fetching logs for author {a}')
-        os.system('touch parsed_files/author_log.txt')
-        cmd = f'cd go && git --no-pager log --stat --author={a} {directory} > ../author_log.txt'
+        
+        author_file_name = 'parsed_files/author_log.txt'
+        os.system(f'touch {author_file_name}')
+        cmd = f'cd go && git --no-pager log --stat --author={a} {directory} > ../{author_file_name}'
         os.system(cmd)
 
         current_author_commits = parse_log_text_to_object(a, directory)

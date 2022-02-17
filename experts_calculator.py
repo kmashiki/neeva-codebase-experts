@@ -16,10 +16,12 @@ from helpers import (
 )
 
 class ExpertCalculator:
-    def __init__(self, directory, print_logs, num_experts):
+    def __init__(self, directory, print_logs, num_experts, ranking_constants, ranking_constants_file_name):
         self.directory = directory
         self.print_logs = print_logs
         self.num_experts = num_experts
+        self.ranking_constants = ranking_constants
+        self.ranking_constants_file_name = ranking_constants_file_name
 
 
     #############################################
@@ -252,7 +254,9 @@ class ExpertCalculator:
 
         final_blame_score_by_author = {}
         for a in blame_by_author_obj.keys():
-            final_blame_score_by_author[a] = percent_lines_contributed_by_author_stats[a] + score_current_code_by_author_and_recency[a] + percent_files_touched_by_author[a]
+            final_blame_score_by_author[a] = self.ranking_constants['LINES_CONTRIBUTED_SCALAR'] * percent_lines_contributed_by_author_stats.get(a, 0) + \
+                                                self.ranking_constants['BLAME_CODE_SCORE_SCALAR'] * score_current_code_by_author_and_recency.get(a, 0) + \
+                                                self.ranking_constants['FILES_TOUCHED_SCALAR'] * percent_files_touched_by_author.get(a, 0)
 
         return final_blame_score_by_author
 
@@ -280,7 +284,9 @@ class ExpertCalculator:
         """
         Determines score of number of lines of code contributed to *current* codebase taking
         recency into account. Any contribution that is < the average commit year gets weighted
-        with scalar x (TO DO). Normalizes raw scores to make values comparable between authors.
+        with scalar `OLDER_CODE_CONTRIBUTION_SCALAR` and contributions >= average commit year gets
+        weighted with scalar `NEWER_CODE_CONTRIBUTION_SCALAR`.
+        Normalizes raw scores to make values comparable between authors.
 
         blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
         contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
@@ -292,7 +298,7 @@ class ExpertCalculator:
         for a, obj in blame_by_author_obj.items():
             curr_author_sum = 0
             for year, value in obj[contribution_type].items():
-                curr_author_sum += value * (1 if int(year) >= average_contribution_year else 0.5)
+                curr_author_sum += value * (self.ranking_constants['NEWER_CODE_CONTRIBUTION_SCALAR'] if int(year) >= average_contribution_year else self.ranking_constants['OLDER_CODE_CONTRIBUTION_SCALAR'])
             score_by_author_obj[a] = curr_author_sum
         
         return normalize_dictionary(score_by_author_obj)
@@ -397,7 +403,9 @@ class ExpertCalculator:
         
         final_log_score_by_author = {}
         for a in logs_by_author_obj.keys():
-            final_log_score_by_author[a] = normalized_num_commits_by_author.get(a, 0) + normalized_log_code_score_by_author.get(a, 0) + normalized_num_reviews_by_author.get(a, 0)
+            final_log_score_by_author[a] = self.ranking_constants['NUM_COMMMITS_SCALAR'] * normalized_num_commits_by_author.get(a, 0) + \
+                                           self.ranking_constants['LOG_CODE_SCORE_SCALAR'] *  normalized_log_code_score_by_author.get(a, 0) + \
+                                           self.ranking_constants['NUM_REVIEWS_SCALAR'] * normalized_num_reviews_by_author.get(a, 0)
 
         return final_log_score_by_author
     
@@ -430,7 +438,9 @@ class ExpertCalculator:
     def get_log_code_score_by_author(self, logs_by_author_obj):
         """
         Determines score by author based on num insertions and deletions across all commits.
-        TO DO: add scalars
+        Any insertions is weighted with scalar `NUM_INSERTIONS_SCALAR`; deletions are weighted
+        with scalar that is < the average commit year gets weighted
+        with scalar `NUM_DELETIONS_SCALAR`.
         
         logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
         return Object {author_email: int}
@@ -439,7 +449,7 @@ class ExpertCalculator:
         for a, stats_arr in logs_by_author_obj.items():
             curr_author_sum = 0
             for s in stats_arr:
-                curr_author_sum += s.get('num_insertions', 0) + 0.5 * s.get('num_deletions', 0)
+                curr_author_sum += (self.ranking_constants['NUM_INSERTIONS_SCALAR'] * s.get('num_insertions', 0)) + (self.ranking_constants['NUM_DELETIONS_SCALAR'] * s.get('num_deletions', 0))
             log_code_score_by_author[a] = curr_author_sum
             
         return log_code_score_by_author
@@ -470,8 +480,8 @@ class ExpertCalculator:
 
     def calculate_expert_scores(self, blame_by_author_obj, logs_by_author_obj):
         """
-        Calculates expert scorefor each author as a combination of blame_score and log_score
-        TO DO: add scalar to each of these scores
+        Calculates expert score for each author as a combination of blame_score and log_score that are
+        weighted with config scalars `BLAME_SCALAR` and `LOG_SCALAR`.
 
         blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
         logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
@@ -482,7 +492,7 @@ class ExpertCalculator:
 
         score_by_author = {}
         for a in list(set().union(final_blame_score_by_author.keys(), final_log_score_by_author.keys())):
-            score_by_author[a] = final_blame_score_by_author.get(a, 0) + final_log_score_by_author.get(a, 0)
+            score_by_author[a] = (self.ranking_constants['BLAME_SCALAR'] * final_blame_score_by_author.get(a, 0)) + (self.ranking_constants['LOG_SCALAR'] * final_log_score_by_author.get(a, 0))
         
         score_by_author = sort_dict_by_value(score_by_author)
 
@@ -495,7 +505,7 @@ class ExpertCalculator:
         expert_scores: Object {author_email: expert_score}
         returns None
         """
-        print(f'\n---- Top {self.num_experts} Experts ----')
+        print(f'\n---- Top {self.num_experts} Experts for {self.ranking_constants_file_name}----')
 
         i = 0
         for k, v in expert_scores.items():

@@ -1,4 +1,5 @@
 import click
+import json
 
 from experts_calculator import ExpertCalculator
 from helpers import (
@@ -20,29 +21,49 @@ GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
     (2) compare -- Compare two ranking functions given two config files')
     """
 )
-def expert_cli(directory, print_logs, num_experts, action):
+@click.option('--ranking1_config', default='ranking_configs/default_ranking_config.json', help="First set of constants to be used in ranking function")
+@click.option('--ranking2_config', default='ranking_configs/default_ranking_config.json', help="Second set of constants to be used in ranking function")
+def expert_cli(directory, print_logs, num_experts, action, ranking1_config, ranking2_config):
     """
     CLI to implement the Expert feature for Github. Given a git repository,
     determines the top 3 experts for a given directory within the Golang git repo.
     """
 
     if action=='calculate':
-        ec = ExpertCalculator(directory, print_logs, num_experts)
+        with open(ranking1_config) as config_file:
+            constants = json.load(config_file)
 
         setup()
-        
-        # Note: there is no check if the directory is valid. It is assumed the directory
-        # exists and is relative to go/
-
-        authors = ec.get_authors_for_directory()
-        logs_by_author_obj = ec.get_logs_for_authors(authors)
-        blame_by_author_obj = ec.get_current_contributions_per_author()
-
-        expert_scores = ec.calculate_expert_scores(blame_by_author_obj, logs_by_author_obj)
+        ec = ExpertCalculator(directory, print_logs, num_experts, constants)
+        expert_scores = run_expert_calculator(ec)
         ec.print_expert_scores(expert_scores)
-    else:
-        print('compare is being implemented')
-        # TO DO
-    
+    elif action=='compare':
+        with open(ranking1_config) as config_file1:
+            constants1 = json.load(config_file1)
+        
+        with open(ranking2_config) as config_file2:
+            constants2 = json.load(config_file2)
+
+        setup()
+
+        print(f'\nRunning expert calculator on {ranking1_config}')
+        ec1 = ExpertCalculator(directory, print_logs, num_experts, constants1, ranking1_config)
+        expert_scores1 = run_expert_calculator(ec1)
+
+        print(f'\nRunning expert calculator on {ranking2_config}')
+        ec2 = ExpertCalculator(directory, print_logs, num_experts, constants2, ranking2_config)
+        expert_scores2 = run_expert_calculator(ec2)
+
+        ec1.print_expert_scores(expert_scores1)
+        ec2.print_expert_scores(expert_scores2)
+
+def run_expert_calculator(ec):
+    authors = ec.get_authors_for_directory()
+    logs_by_author_obj = ec.get_logs_for_authors(authors)
+    blame_by_author_obj = ec.get_current_contributions_per_author()
+    expert_scores = ec.calculate_expert_scores(blame_by_author_obj, logs_by_author_obj)
+
+    return expert_scores
+
 if __name__ == '__main__':
     expert_cli()

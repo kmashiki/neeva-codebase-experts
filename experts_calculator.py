@@ -366,21 +366,18 @@ class ExpertCalculator:
         for a in logs_by_author_obj.keys():
             final_log_score_by_author[a] = 0
         
-        print(logs_by_author_obj)
-
-        # TO DO    
-        # num total commits
-        # % commits made in last 12 months
         num_commits_by_author, num_commits_by_author_last_12_months, percent_commits_by_author_last_12_months = self.get_num_commits_by_author(logs_by_author_obj)
-        print(num_commits_by_author)
-        print(num_commits_by_author_last_12_months)
-        print(percent_commits_by_author_last_12_months)
+        normalized_num_commits_by_author = normalize_dictionary(num_commits_by_author)
         
-        # num insertions + (0.5 * num deletions)
         log_code_score_by_author = self.get_log_code_score_by_author(logs_by_author_obj)
-        print(log_code_score_by_author)
+        normalized_log_code_score_by_author = normalize_dictionary(log_code_score_by_author)
 
-        # avg num lines in commit message -- consider setting scalar to 0
+        num_reviews_by_author = self.get_num_reviews_by_author(logs_by_author_obj)
+        normalized_num_reviews_by_author = normalize_dictionary(num_reviews_by_author)
+        
+        final_log_score_by_author = {}
+        for a in logs_by_author_obj.keys():
+            final_log_score_by_author[a] = normalized_num_commits_by_author.get(a, 0) + normalized_log_code_score_by_author.get(a, 0) + normalized_num_reviews_by_author.get(a, 0)
 
         return final_log_score_by_author
     
@@ -413,6 +410,19 @@ class ExpertCalculator:
             log_code_score_by_author[a] = curr_author_sum
             
         return normalize_dictionary(log_code_score_by_author)
+    
+    def get_num_reviews_by_author(self, logs_by_author_obj):
+        num_reviews_by_author = {}
+        for a, stats_arr in logs_by_author_obj.items():
+            curr_author_sum = 0
+            for s in stats_arr:
+                for r in s.get('reviewed_by', []):
+                    if r in num_reviews_by_author.keys():
+                        num_reviews_by_author[r] += 1
+                    else:
+                        num_reviews_by_author[r] = 1
+
+        return num_reviews_by_author
 
     
 
@@ -433,8 +443,8 @@ class ExpertCalculator:
         final_log_score_by_author = self.get_log_metrics(logs_by_author_obj)
 
         score_by_author = {}
-        for a in final_log_score_by_author.keys():
-            score_by_author[a] = final_blame_score_by_author.get(a, 0) + final_log_score_by_author.get(a)
+        for a in list(set().union(final_blame_score_by_author.keys(), final_log_score_by_author.keys())):
+            score_by_author[a] = final_blame_score_by_author.get(a, 0) + final_log_score_by_author.get(a, 0)
         
         score_by_author = sort_dict_by_value(score_by_author)
 

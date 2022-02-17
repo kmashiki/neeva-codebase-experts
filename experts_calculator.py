@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from collections import OrderedDict
+import numpy as np
 
 from helpers import (
     is_comment,
@@ -497,6 +498,23 @@ class ExpertCalculator:
         score_by_author = sort_dict_by_value(score_by_author)
 
         return score_by_author
+    
+    def write_scores_to_output_file(self, expert_scores):
+        """
+        Writes ordered dict items to output file
+
+        expert_scores: OrderedDict {author_email: score(float)}
+        returns None
+        """
+        file_name = 'outputs.txt'
+        os.system(f'touch {file_name}')
+
+        with open(file_name, 'a') as file:
+            file.write(self.ranking_constants_file_name)
+            file.write('\n---------------------------------------------\n')
+            for k, v in expert_scores.items():
+                file.write(f'{k} {round(v, 2)}\n')
+            file.write('\n')
 
     def print_expert_scores(self, expert_scores):
         """
@@ -512,3 +530,12 @@ class ExpertCalculator:
             if i < self.num_experts:
                 print(f'{k} {round(v, 2)}')
             i += 1
+    
+    def get_score_stats(self, expert_scores):
+        return {
+            'min': min(list(expert_scores.values())),
+            'max': max(list(expert_scores.values())),
+            'median': np.median(list(expert_scores.values())),
+            'mean': np.mean(list(expert_scores.values())),
+        }
+        

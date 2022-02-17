@@ -129,5 +129,6 @@ def setup():
     also be added as an option / flag to the CLI
     """
     mkdir_not_exists('parsed_files')
+    os.system('rm -f outputs.txt')
     if not os.path.exists('go'):
         os.system(f'git clone {GOLANG_GIT_REPO}')

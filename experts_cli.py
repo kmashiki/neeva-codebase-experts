@@ -57,6 +57,20 @@ def expert_cli(directory, print_logs, num_experts, action, ranking1_config, rank
         ec1.print_expert_scores(expert_scores1)
         ec2.print_expert_scores(expert_scores2)
 
+        ec1.write_scores_to_output_file(expert_scores1)
+        ec2.write_scores_to_output_file(expert_scores2)
+
+        print(f'\nStats from {ranking1_config}')
+        print(ec1.get_score_stats(expert_scores1))
+
+        print(f'\nStats from {ranking2_config}')
+        print(ec1.get_score_stats(expert_scores2))
+
+        if next(iter(expert_scores1)) == next(iter(expert_scores1)):
+            print('\nRanking functions returned the same top expert')
+        else:
+            print('\nRanking functions dit NOT return the same top expert')
+
 def run_expert_calculator(ec):
     authors = ec.get_authors_for_directory()
     logs_by_author_obj = ec.get_logs_for_authors(authors)

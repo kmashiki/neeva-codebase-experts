@@ -26,6 +26,12 @@ class ExpertCalculator:
     #############################################
 
     def get_current_contributions_per_author(self):
+        """
+        Determines contributions each author made to the *current* codebase for each year.
+        Contribution types include `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`
+
+        returns Object {author_email: {contribution_type: {year: int}}}
+        """
         files_in_dir = get_files_in_directory(self.directory)
 
         for f in files_in_dir:
@@ -49,6 +55,15 @@ class ExpertCalculator:
         return blame_by_author_obj
 
     def parse_current_blame_file(self, file_name, blame_by_author_obj):
+        """
+        Helper function for `get_current_contributions_per_author` to parse
+        `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`
+        for each author and each year for a given file.
+
+        file_name: String
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        returns Object {author_email: {contribution_type: {year: int}}}
+        """
         with open(file_name, 'r') as file:
             for line in file:
                 email = parse_email(line)
@@ -88,6 +103,8 @@ class ExpertCalculator:
     ########## Parse Functions (Log) ##########
     ###########################################
 
+    ## TO DO: Document these functions!
+    
     def get_authors_for_directory(self):
         # store authors in text file
         if self.print_logs:
@@ -198,17 +215,35 @@ class ExpertCalculator:
     #################################################
 
     def get_blame_metrics(self, blame_by_author_obj):
-        num_lines_contributed_by_author_stats = self.get_percent_current_code_by_author(blame_by_author_obj, 'num_lines_contributed')
+        """
+        Combines 3 top-level blame metrics into one blame_score per author. Because blame looks 
+        at the codebase's *current* state, these metrics do not reflect any historical changes
+        in the directory. The 3 metrics are:
+            - percent_lines_contributed
+            - current code score (taking recency into account)
+            - percent_files_touched
+        
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        returns Object {author_email: blame_score}
+        """
+        percent_lines_contributed_by_author_stats = self.get_percent_current_code_by_author(blame_by_author_obj, 'num_lines_contributed')
         score_current_code_by_author_and_recency = self.get_score_current_code_by_author_and_recency(blame_by_author_obj, 'num_lines_contributed')
         percent_files_touched_by_author = self.get_percent_files_touched_by_author(blame_by_author_obj)
 
         final_blame_score_by_author = {}
         for a in blame_by_author_obj.keys():
-            final_blame_score_by_author[a] = num_lines_contributed_by_author_stats[a] + score_current_code_by_author_and_recency[a] + percent_files_touched_by_author[a]
+            final_blame_score_by_author[a] = percent_lines_contributed_by_author_stats[a] + score_current_code_by_author_and_recency[a] + percent_files_touched_by_author[a]
 
         return final_blame_score_by_author
 
     def get_percent_current_code_by_author(self, blame_by_author_obj, contribution_type):
+        """
+        Determines percent of lines of code each author contributed to in the code's *current* state. 
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
+        return Object {author_email: float}
+        """
         total_lines_in_directory = self.get_total_lines_in_directory(blame_by_author_obj, contribution_type)
 
         num_lines_by_author_obj = {}
@@ -222,6 +257,15 @@ class ExpertCalculator:
         return percent_lines_by_author_obj
 
     def get_score_current_code_by_author_and_recency(self, blame_by_author_obj, contribution_type):
+        """
+        Determines score of number of lines of code contributed to *current* codebase taking
+        recency into account. Any contribution that is < the average commit year gets weighted
+        with scalar x (TO DO). Normalizes raw scores to make values comparable between authors.
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
+        return Object {author_email: normalized_score_value}
+        """
         average_contribution_year = int(self.get_average_contribution_year(blame_by_author_obj, contribution_type))
 
         score_by_author_obj = {}
@@ -234,14 +278,29 @@ class ExpertCalculator:
         return normalize_dictionary(score_by_author_obj)
 
     def get_percent_files_touched_by_author(self, blame_by_author_obj):
-        score_by_author_obj = {}
+        """
+        Determines percent of files each author contributed to in the code's *current* state. 
+        That is, if an author committed code to a file historically but no current lines of a file
+        were written by that author, they do not "get credit" for touching that file.
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        returns Object {author_email: float}
+        """
+        percent_files_touched_by_author = {}
         num_files_in_dir = float(len(get_files_in_directory(self.directory)))
         for a, obj in blame_by_author_obj.items():
-            score_by_author_obj[a] = len(obj['files_touched']) / num_files_in_dir
+            percent_files_touched_by_author[a] = len(obj['files_touched']) / num_files_in_dir
         
-        return score_by_author_obj
+        return percent_files_touched_by_author
 
     def get_average_contribution_year(self, blame_by_author_obj, contribution_type):
+        """
+        Determines the year that the average line of *current* code was committed (to be used in recency heuristics)
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
+        return int (year)
+        """
         half_num_lines_in_directory = self.get_total_lines_in_directory(blame_by_author_obj, contribution_type) / 2
         num_contributions_by_year = self.get_num_contributions_by_year(blame_by_author_obj, contribution_type)
         num_contributions_by_year = OrderedDict(sorted(num_contributions_by_year.items()))
@@ -256,6 +315,13 @@ class ExpertCalculator:
         return average_contribution_year
 
     def get_total_lines_in_directory(self, blame_by_author_obj, contribution_type):
+        """
+        Determines total number of lines in the directory (i.e. all files in sub directories)
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
+        return int
+        """
         num_lines_by_author_obj = {}
 
         for a, obj in blame_by_author_obj.items():
@@ -266,6 +332,13 @@ class ExpertCalculator:
         return total_lines_in_directory
 
     def get_num_contributions_by_year(self, blame_by_author_obj, contribution_type):
+        """
+        Determines number of lines of *current* code contributed for each year
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        contribution_type: String (one of `num_lines_contributed`, `num_lines_code_contributed`, `num_lines_comments_contributed`)
+        return Object {year: count}
+        """
         num_contributions_by_year = {}
         for author, stats in blame_by_author_obj.items():
             for year, num in stats[contribution_type].items():
@@ -281,6 +354,12 @@ class ExpertCalculator:
     ###############################################
 
     def get_log_metrics(self, logs_by_author_obj):
+        """
+        Calculates log_score for each author.
+
+        logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
+        return Object {author_email: log_score}
+        """
         final_log_score_by_author = {}
 
         for a in logs_by_author_obj.keys():
@@ -300,6 +379,14 @@ class ExpertCalculator:
     #################################################
 
     def calculate_expert_scores(self, blame_by_author_obj, logs_by_author_obj):
+        """
+        Calculates expert scorefor each author as a combination of blame_score and log_score
+        TO DO: add scalar to each of these scores
+
+        blame_by_author_obj: Object {author_email: {contribution_type: {year: int}}}
+        logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
+        return Object {author_email: expert_score}
+        """
         final_blame_score_by_author = self.get_blame_metrics(blame_by_author_obj)
         final_log_score_by_author = self.get_log_metrics(logs_by_author_obj)
 
@@ -312,6 +399,12 @@ class ExpertCalculator:
         return score_by_author
 
     def print_expert_scores(self, expert_scores):
+        """
+        Prints top `num_experts` scores
+
+        expert_scores: Object {author_email: expert_score}
+        returns None
+        """
         print(f'\n---- Top {self.num_experts} Experts ----')
 
         i = 0

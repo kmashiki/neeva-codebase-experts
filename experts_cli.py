@@ -16,9 +16,10 @@ GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
 @click.option('--print-logs', '-p', is_flag=True, help='Print logs (aka debug mode)')
 @click.option('--num-experts', '-n', help='Number of experts to show')
 def expert_cli(directory, print_logs, num_experts):
-    """CLI to implement the Expert feature for Github.
-    Given a git repository, determines the top 3 experts for a given directory
-    within the Golang git repo."""
+    """
+    CLI to implement the Expert feature for Github. Given a git repository,
+    determines the top 3 experts for a given directory within the Golang git repo.
+    """
 
     ec = ExpertCalculator(directory, print_logs, int(num_experts))
 

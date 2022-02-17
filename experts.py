@@ -2,12 +2,11 @@ import click
 import os
 import subprocess
 from datetime import datetime
-import numpy as np
 import operator
 from collections import OrderedDict
 import json
 
-GOLANG_GIT_REPO = "https://github.com/golang/go.git"
+GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
 
 
 #############################################
@@ -18,47 +17,58 @@ def get_current_contributions_per_author(directory):
     files_in_dir = get_files_in_directory(directory)
 
     for f in files_in_dir:
-        file_name = '{}_blame.txt'.format(f.replace("/", "-").replace(".", "-"))
-        os.system('touch {}'.format(file_name))
+        formatted_file_name = path_to_filename(f)
+        file_name = f'parsed_files/{formatted_file_name}_blame.txt'
+        os.system(f'touch {file_name}')
 
-        cmd = "cd go && git --no-pager blame -e {} > ../{}".format(f, file_name)
+        cmd = f'cd go && git --no-pager blame -e {f} > ../{file_name}'
         os.system(cmd)
 
     blame_by_author_obj = {}
     for f in files_in_dir:
-        file_name = '{}_blame.txt'.format(f.replace("/", "-").replace(".", "-"))
-        with open(file_name, "r") as file:
-            for line in file:
-                email = parse_email(line)
-                year = parse_year(line)
+        formatted_file_name = path_to_filename(f)
+        file_name = f'parsed_files/{formatted_file_name}_blame.txt'
 
-                if email in blame_by_author_obj.keys():
-                    if year in blame_by_author_obj[email]['num_lines_contributed'].keys():
-                        blame_by_author_obj[email]['num_lines_contributed'][year] += 1
-                    else:
-                        blame_by_author_obj[email]['num_lines_contributed'][year] = 1
-                    
-                    if year in blame_by_author_obj[email]['num_lines_code_contributed'].keys():
-                        blame_by_author_obj[email]['num_lines_code_contributed'][year] += is_code(line)
-                    else:
-                        blame_by_author_obj[email]['num_lines_code_contributed'][year] = is_code(line)
-                    
-                    if year in blame_by_author_obj[email]['num_lines_comments_contributed'].keys():
-                        blame_by_author_obj[email]['num_lines_comments_contributed'][year] += is_comment(line)
-                    else:
-                        blame_by_author_obj[email]['num_lines_comments_contributed'][year] = is_comment(line)
-                    
-                    if file_name not in blame_by_author_obj[email]['files_touched']:
-                        blame_by_author_obj[email]['files_touched'].append(file_name)
+        try:
+            blame_by_author_obj.update(file_helper(file_name, blame_by_author_obj))
+        except UnicodeDecodeError as e:
+            print(f'{f} has non Unicode characters. Not processing contributions to this file')
 
+    return blame_by_author_obj
+
+def file_helper(file_name, blame_by_author_obj):
+    with open(file_name, 'r') as file:
+        for line in file:
+            email = parse_email(line)
+            year = parse_year(line)
+
+            if email in blame_by_author_obj.keys():
+                if year in blame_by_author_obj[email]['num_lines_contributed'].keys():
+                    blame_by_author_obj[email]['num_lines_contributed'][year] += 1
                 else:
-                    blame_by_author_obj[email] = {
-                        'num_lines_contributed': {year: 1},
-                        'num_lines_code_contributed': {year: is_code(line)},
-                        'num_lines_comments_contributed': {year: is_comment(line)},
-                        'files_touched': [file_name]
-                    }
+                    blame_by_author_obj[email]['num_lines_contributed'][year] = 1
+                
+                if year in blame_by_author_obj[email]['num_lines_code_contributed'].keys():
+                    blame_by_author_obj[email]['num_lines_code_contributed'][year] += is_code(line)
+                else:
+                    blame_by_author_obj[email]['num_lines_code_contributed'][year] = is_code(line)
+                
+                if year in blame_by_author_obj[email]['num_lines_comments_contributed'].keys():
+                    blame_by_author_obj[email]['num_lines_comments_contributed'][year] += is_comment(line)
+                else:
+                    blame_by_author_obj[email]['num_lines_comments_contributed'][year] = is_comment(line)
+                
+                if file_name not in blame_by_author_obj[email]['files_touched']:
+                    blame_by_author_obj[email]['files_touched'].append(file_name)
 
+            else:
+                blame_by_author_obj[email] = {
+                    'num_lines_contributed': {year: 1},
+                    'num_lines_code_contributed': {year: is_code(line)},
+                    'num_lines_comments_contributed': {year: is_comment(line)},
+                    'files_touched': [file_name]
+                }
+    
     return blame_by_author_obj
 
 ###########################################
@@ -69,16 +79,16 @@ def get_authors_for_directory(directory):
     # store authors in text file
     if PRINT_LOGS:
         print('Fetching authors for directory...')
-    author_file_name = 'authors.txt'
-    os.system('touch {}'.format(author_file_name))
-    cmd = "cd go && git --no-pager shortlog -s -n -e --all --no-merges {} > ../{}".format(directory, author_file_name)
+    author_file_name = 'parsed_files/authors.txt'
+    os.system(f'touch {author_file_name}')
+    cmd = f'cd go && git --no-pager shortlog -s -n -e --all --no-merges {directory} > ../{author_file_name}'
     os.system(cmd)
 
     # parse authors from text file to array
     if PRINT_LOGS:
         print('Parsing authors for directory...')
     authors = []
-    with open(author_file_name, "r") as file:
+    with open(author_file_name, 'r') as file:
         for line in file:
             author_email = parse_email(line)
             authors.append(author_email)
@@ -92,9 +102,9 @@ def get_logs_for_authors(authors, directory):
 
     for a in authors:
         if PRINT_LOGS:
-            print('Fetching logs for author {}'.format(a))
-        os.system('touch author_log.txt')
-        cmd = "cd go && git --no-pager log --stat --author={} {} > ../author_log.txt".format(a, directory)
+            print(f'Fetching logs for author {a}')
+        os.system('touch parsed_files/author_log.txt')
+        cmd = f'cd go && git --no-pager log --stat --author={a} {directory} > ../author_log.txt'
         os.system(cmd)
 
         current_author_commits = parse_log_text_to_object(a, directory)
@@ -106,8 +116,8 @@ def parse_log_text_to_object(author, directory):
     current_author_commits = []
     curr_commit_obj = {}
 
-    author_file_name = 'author_log.txt'.format(author)
-    with open(author_file_name, "r") as file:
+    author_file_name = 'parsed_files/author_log.txt'
+    with open(author_file_name, 'r') as file:
         in_commit_msg = False
         num_lines_commit_msg = 0
         reviewed_by_emails = []
@@ -117,7 +127,7 @@ def parse_log_text_to_object(author, directory):
             line = line.strip()
 
             # new commit -- push prev object and start new one
-            if line.startswith("commit") and len((line.split("commit")[1]).strip()) == 40:
+            if line.startswith('commit') and len((line.split('commit')[1]).strip()) == 40:
                 if curr_commit_obj != {}:
                     # push reviewed by emails before resetting value upon new commit
                     curr_commit_obj['reviewed_by'] = reviewed_by_emails
@@ -130,7 +140,7 @@ def parse_log_text_to_object(author, directory):
                     reviewed_by_emails = []
                     files_changed = []
 
-                curr_commit_obj['commit_sha'] = (line.split("commit")[1]).strip()
+                curr_commit_obj['commit_sha'] = (line.split('commit')[1]).strip()
             elif line.startswith('Date:'):
                 date_string = parse_log_value(line, 'Date:')
 
@@ -139,10 +149,10 @@ def parse_log_text_to_object(author, directory):
                 parsed_date = datetime.strptime(date_string, '%a %b %d %H:%M:%S %Y')
                 curr_commit_obj['commit_date'] = parsed_date
                 in_commit_msg = True # commit message starts after date
-            elif line.startswith('Change-Id:') or (line.startswith('{}'.format(directory)) and in_commit_msg == True):
+            elif line.startswith('Change-Id:') or (line.startswith(directory) and in_commit_msg == True):
                 curr_commit_obj['num_lines_commit_msg'] = num_lines_commit_msg
                 in_commit_msg = False # commit message ends before change id
-            elif line.startswith('{}'.format(directory)):
+            elif line.startswith(directory):
                 files_changed.append(line.split()[0])
             elif in_commit_msg:
                 num_lines_commit_msg += 1
@@ -194,20 +204,20 @@ def get_files_in_directory(directory):
     return files_in_dir
 
 def parse_email(line):
-    index_less_than = line.find("<")
-    index_greater_than = line.find(">")
+    index_less_than = line.find('<')
+    index_greater_than = line.find('>')
     return line[index_less_than + 1 : index_greater_than]
 
 def parse_year(line):
-    dash_index = line.find("-")
+    dash_index = line.find('-')
     return line[: dash_index][-4:]
 
-def normalize_dictionary(dict):
-    factor = 1.0 / sum(dict.itervalues())
-    for k, v in dict.items():
-        dict[k] = v * factor
+def normalize_dictionary(dictionary):
+    factor = 1.0 / sum(dictionary.values())
+    for k, v in dictionary.items():
+        dictionary[k] = v * factor
     
-    return dict
+    return dictionary
 
 def sort_dict_by_value(d):
     sorted_tuples = reversed(sorted(d.items(), key=lambda item: item[1]))
@@ -216,6 +226,13 @@ def sort_dict_by_value(d):
         sorted_dict[k] = v
 
     return sorted_dict
+
+def path_to_filename(path):
+    return path.replace('/', '-').replace('.', '-')
+
+def mkdir_not_exists(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 
 #################################################
@@ -272,7 +289,7 @@ def get_average_contribution_year(blame_by_author_obj, contribution_type):
     num_contributions_by_year = OrderedDict(sorted(num_contributions_by_year.items()))
     
     average_contribution_year = None
-    for k, v in num_contributions_by_year.iteritems():
+    for k, v in num_contributions_by_year.items():
         half_num_lines_in_directory -= v
         if half_num_lines_in_directory <= 0:
             average_contribution_year = k
@@ -325,9 +342,10 @@ def get_log_metrics(logs_by_author_obj):
 #########################
 
 @click.command()
-@click.option("--directory", help="Directory name, relative to the root of the Go source git tree")
-@click.option("--print-logs", '-p', is_flag=True, help="Print logs (aka debug mode)")
-def expert(directory, print_logs):
+@click.option('--directory', '-d', help='Directory name, relative to the root of the Go source git tree')
+@click.option('--print-logs', '-p', is_flag=True, help='Print logs (aka debug mode)')
+@click.option('--num-experts', '-n', help='Number of experts to show')
+def expert(directory, print_logs, num_experts):
     """CLI to implement the Expert feature for Github.
     Given a git repository, determines the top 3 experts for a given directory
     within the Golang git repo."""
@@ -340,7 +358,13 @@ def expert(directory, print_logs):
     PRINT_LOGS = False
     if print_logs:
         PRINT_LOGS = True
-        click.echo("Printing logs...")
+        click.echo('Printing logs...')
+    
+    num_experts = int(num_experts)
+
+    mkdir_not_exists('parsed_files')
+    if not os.path.exists('go'):
+        os.system(f'git clone {GOLANG_GIT_REPO}')
     
     authors = get_authors_for_directory(directory)
     logs_by_author_obj = get_logs_for_authors(authors, directory)
@@ -360,8 +384,11 @@ def expert(directory, print_logs):
 
     print(score_by_author)
 
-    for k, v in score_by_author.items()[:3]:
-        print("{} {}".format(k, round(v, 2)))
+    i = 0
+    for k, v in score_by_author.items():
+        if i < num_experts:
+            print(f'{k} {round(v, 2)}')
+        i += 1
 
 
 if __name__ == '__main__':

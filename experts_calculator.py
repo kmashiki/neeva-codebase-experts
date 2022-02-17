@@ -21,6 +21,7 @@ class ExpertCalculator:
         self.print_logs = print_logs
         self.num_experts = num_experts
 
+
     #############################################
     ########## Parse Functions (Blame) ##########
     #############################################
@@ -104,12 +105,16 @@ class ExpertCalculator:
     ########## Parse Functions (Log) ##########
     ###########################################
 
-    ## TO DO: Document these functions!
-
     def get_authors_for_directory(self):
-        # store authors in text file
+        """
+        Finds emails of any contributor that has ever commit to this directory.
+
+        return [String]
+        """
         if self.print_logs:
             print('Fetching authors for directory...')
+
+        # store authors in text file
         author_file_name = 'parsed_files/authors.txt'
         os.system(f'touch {author_file_name}')
         cmd = f'cd go && git --no-pager shortlog -s -n -e --all --no-merges {self.directory} > ../{author_file_name}'
@@ -127,6 +132,12 @@ class ExpertCalculator:
         return authors
 
     def get_logs_for_authors(self, authors):
+        """
+        Derives commit stats by author from text file to array of commit stat objects
+        
+        authors: [String]
+        returns Object {author_email: [{commit_stats_obj}]}
+        """
         if self.print_logs:
             print('Fetching logs for authors.....')
         logs_by_author_obj = {}
@@ -135,6 +146,7 @@ class ExpertCalculator:
             if self.print_logs:
                 print(f'Fetching logs for author {a}')
             
+            # store authors' commit history in temp text file
             author_file_name = 'parsed_files/author_log.txt'
             os.system(f'touch {author_file_name}')
             cmd = f'cd go && git --no-pager log --stat --author={a} {self.directory} > ../{author_file_name}'
@@ -146,11 +158,18 @@ class ExpertCalculator:
         return logs_by_author_obj
 
     def parse_log_text_to_object(self, author):
+        """
+        Parses an author's commit history (from text file to array of objects)
+
+        author: String
+        returns [{commit_stats_obj}]
+        """
         current_author_commits = []
         curr_commit_obj = {}
         author_file_name = 'parsed_files/author_log.txt'
 
         with open(author_file_name, 'r') as file:
+            # initialize commit stat objects
             in_commit_msg = False
             num_lines_commit_msg = 0
             reviewed_by_emails = []
@@ -159,7 +178,7 @@ class ExpertCalculator:
             for line in file:
                 line = line.strip()
 
-                # new commit -- push prev object and start new one
+                # new commit -- push prev object and initialize new one once a new commit starts to be parsed
                 if line.startswith('commit') and len((line.split('commit')[1]).strip()) == 40:
                     if curr_commit_obj != {}:
                         # push reviewed by emails before resetting value upon new commit
@@ -167,6 +186,7 @@ class ExpertCalculator:
                         curr_commit_obj['files_changed'] = files_changed
                         current_author_commits.append(curr_commit_obj)
 
+                        # initialize commit stat objects
                         curr_commit_obj = {}
                         in_commit_msg = False
                         num_lines_commit_msg = 0
@@ -193,7 +213,6 @@ class ExpertCalculator:
                     reviewed_by_string = parse_log_value(line, 'Reviewed-by:')
                     reviewed_by_email = parse_email(reviewed_by_string)
                     reviewed_by_emails.append(reviewed_by_email)
-                
                 elif 'files changed' in line or 'file changed' in line:
                     line_parts = line.split(',')
                     for l in line_parts:
@@ -350,6 +369,7 @@ class ExpertCalculator:
 
         return num_contributions_by_year
 
+
     ###############################################
     ########## Heuristic Functions (Log) ##########
     ###############################################
@@ -424,7 +444,6 @@ class ExpertCalculator:
 
         return num_reviews_by_author
 
-    
 
     #################################################
     ########## Final Calculation Functions ##########

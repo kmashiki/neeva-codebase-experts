@@ -33,7 +33,7 @@ def expert_cli(directory, print_logs, num_experts, action):
         
         # Note: there is no check if the directory is valid. It is assumed the directory
         # exists and is relative to go/
-        
+
         authors = ec.get_authors_for_directory()
         logs_by_author_obj = ec.get_logs_for_authors(authors)
         blame_by_author_obj = ec.get_current_contributions_per_author()
@@ -42,6 +42,7 @@ def expert_cli(directory, print_logs, num_experts, action):
         ec.print_expert_scores(expert_scores)
     else:
         print('compare is being implemented')
+        # TO DO
     
 if __name__ == '__main__':
     expert_cli()

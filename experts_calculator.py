@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import OrderedDict
 
 from helpers import (
@@ -365,14 +365,55 @@ class ExpertCalculator:
 
         for a in logs_by_author_obj.keys():
             final_log_score_by_author[a] = 0
+        
+        print(logs_by_author_obj)
 
         # TO DO    
         # num total commits
         # % commits made in last 12 months
+        num_commits_by_author, num_commits_by_author_last_12_months, percent_commits_by_author_last_12_months = self.get_num_commits_by_author(logs_by_author_obj)
+        print(num_commits_by_author)
+        print(num_commits_by_author_last_12_months)
+        print(percent_commits_by_author_last_12_months)
+        
         # num insertions + (0.5 * num deletions)
+        log_code_score_by_author = self.get_log_code_score_by_author(logs_by_author_obj)
+        print(log_code_score_by_author)
+
         # avg num lines in commit message -- consider setting scalar to 0
 
         return final_log_score_by_author
+    
+    def get_num_commits_by_author(self, logs_by_author_obj):
+        num_commits_by_author = {}
+        num_commits_by_author_last_12_months = {}
+        percent_commits_by_author_last_12_months = {}
+        for a, stats_arr in logs_by_author_obj.items():
+            total_num_commits = len(stats_arr)
+            num_commits_by_author[a] = total_num_commits
+
+            recent_commit_counter = 0
+            for s in stats_arr:
+
+                if s['commit_date'] < datetime.now() - timedelta(days = 365):
+                    recent_commit_counter += 1
+            
+            num_commits_by_author_last_12_months[a] = recent_commit_counter
+            percent_commits_by_author_last_12_months[a] = recent_commit_counter / total_num_commits
+        
+        return num_commits_by_author, num_commits_by_author_last_12_months, percent_commits_by_author_last_12_months
+    
+
+    def get_log_code_score_by_author(self, logs_by_author_obj):
+        log_code_score_by_author = {}
+        for a, stats_arr in logs_by_author_obj.items():
+            curr_author_sum = 0
+            for s in stats_arr:
+                curr_author_sum += s.get('num_insertions', 0) + 0.5 * s.get('num_deletions', 0)
+            log_code_score_by_author[a] = curr_author_sum
+            
+        return normalize_dictionary(log_code_score_by_author)
+
     
 
     #################################################

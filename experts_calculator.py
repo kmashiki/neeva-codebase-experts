@@ -134,7 +134,7 @@ class ExpertCalculator:
     def get_logs_for_authors(self, authors):
         """
         Derives commit stats by author from text file to array of commit stat objects
-        
+
         authors: [String]
         returns Object {author_email: [{commit_stats_obj}]}
         """
@@ -402,6 +402,12 @@ class ExpertCalculator:
         return final_log_score_by_author
     
     def get_num_commits_by_author(self, logs_by_author_obj):
+        """
+        Determines number of commits (total, last 12 months, and percent commits in the last 12 months) by author
+        
+        logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
+        return Object {author_email: int}, Object {author_email: int}, Object {author_email: float}
+        """
         num_commits_by_author = {}
         num_commits_by_author_last_12_months = {}
         percent_commits_by_author_last_12_months = {}
@@ -422,6 +428,13 @@ class ExpertCalculator:
     
 
     def get_log_code_score_by_author(self, logs_by_author_obj):
+        """
+        Determines score by author based on num insertions and deletions across all commits.
+        TO DO: add scalars
+        
+        logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
+        return Object {author_email: int}
+        """
         log_code_score_by_author = {}
         for a, stats_arr in logs_by_author_obj.items():
             curr_author_sum = 0
@@ -429,9 +442,15 @@ class ExpertCalculator:
                 curr_author_sum += s.get('num_insertions', 0) + 0.5 * s.get('num_deletions', 0)
             log_code_score_by_author[a] = curr_author_sum
             
-        return normalize_dictionary(log_code_score_by_author)
+        return log_code_score_by_author
     
     def get_num_reviews_by_author(self, logs_by_author_obj):
+        """
+        Determines number of files each author has reviewed
+        
+        logs_by_author_obj: Object {author_email: [{commit_stats_obj}]}
+        return Object {author_email: int}
+        """
         num_reviews_by_author = {}
         for a, stats_arr in logs_by_author_obj.items():
             curr_author_sum = 0

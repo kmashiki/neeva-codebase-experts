@@ -50,7 +50,8 @@ class ExpertCalculator:
             try:
                 blame_by_author_obj.update(self.parse_current_blame_file(file_name, blame_by_author_obj))
             except UnicodeDecodeError as e:
-                print(f'{f} has non Unicode characters. Not processing contributions to this file')
+                if self.print_logs:
+                    print(f'{f} has non Unicode characters. Not processing contributions to this file')
 
         return blame_by_author_obj
 
@@ -104,7 +105,7 @@ class ExpertCalculator:
     ###########################################
 
     ## TO DO: Document these functions!
-    
+
     def get_authors_for_directory(self):
         # store authors in text file
         if self.print_logs:

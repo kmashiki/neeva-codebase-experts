@@ -27,7 +27,6 @@ def is_code(line):
     line: String
     returns Boolean
     """
-    Determines if a line is code (i.e. it is nor commented out)
     return int(not is_comment(line))
 
 def parse_log_value(line, substring):

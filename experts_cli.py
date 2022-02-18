@@ -16,13 +16,13 @@ GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
 @click.option('--directory', '-d', help='Directory name, relative to the root of the Go source git tree')
 @click.option('--print-logs', '-p', is_flag=True, help='Print logs (aka debug mode)')
 @click.option('--num-experts', '-n', default=3, help='Number of experts to show')
-@click.option('--action', default='calculate', help="""
+@click.option('--action', '-a', default='calculate', help="""
     (1) calcualte -- Calculate experts for a given repo
     (2) compare -- Compare two ranking functions given two config files')
     """
 )
-@click.option('--ranking1_config', default='ranking_configs/default_ranking_config.json', help="First set of constants to be used in ranking function")
-@click.option('--ranking2_config', default='ranking_configs/default_ranking_config.json', help="Second set of constants to be used in ranking function")
+@click.option('--ranking1_config', '-r1', default='ranking_configs/default_ranking_config.json', help="First set of constants to be used in ranking function")
+@click.option('--ranking2_config', '-r2', default='ranking_configs/default_ranking_config.json', help="Second set of constants to be used in ranking function")
 def expert_cli(directory, print_logs, num_experts, action, ranking1_config, ranking2_config):
     """
     CLI to implement the Expert feature for Github. Given a git repository,
@@ -34,7 +34,7 @@ def expert_cli(directory, print_logs, num_experts, action, ranking1_config, rank
             constants = json.load(config_file)
 
         setup()
-        ec = ExpertCalculator(directory, print_logs, num_experts, constants)
+        ec = ExpertCalculator(directory, print_logs, num_experts, constants, ranking1_config)
         expert_scores = run_expert_calculator(ec)
         ec.print_expert_scores(expert_scores)
     elif action=='compare':

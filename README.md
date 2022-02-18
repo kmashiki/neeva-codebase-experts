@@ -45,7 +45,7 @@ The 3 git commands I use to collect information are:
 
 I dump outputs from each of these commands into a text file that I then parse into a dict (hence the inclusion of `--no-pager`).
 
-Find pseudocode for this process at `pseudo_code.md`
+Find pseudocode for this process at [`pseudo_code.md`](https://github.com/kmashiki/neeva-codebase-experts/blob/main/pseudo_code.md)
 
 ## Components of the Expert Score
 The two high level components of the expert score are the blame score and the log score. As I mentioned above, the blame score represents eexpertise around the current state of the codebase, while the log score represents historical expertise.

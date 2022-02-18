@@ -1,0 +1,41 @@
+## Git Log Parsing
+- Find anyone who has ever contributed to this repo: `git shortlog -s -n -e --all --no-merges <dir>`
+- logs_by_author_obj = {}
+- Loop through authors: for a in authors
+    - Log = `git log --stat --author=<a.email> <dir>`
+    - logs_by_author_obj[email].append(Log)
+- stats_by_author_obj = {}
+- Loop through logs to run stats per author: for email, logs in logs_by_author_obj.items()
+    - stats_by_author_obj[email][num_commits] = len(logs)
+    - …
+- expert_score_by_author_obj = {}
+- Loop through each author: for a in authors
+    - Score = Run heuristic on all stats in stats_by_author
+    - expert_score_by_author_obj[a] = score
+- Sort logs_by_author_obj by score (i.e., value)
+
+
+## Git Blame Parsing
+- blame_by_author_obj = {}
+- Find each file in directory
+- Loop through files
+    - run `git blame <file>`
+- Loop through git blame dump files: for f in files
+    - Loop through each line
+        - A = parse_author
+        - Year = parse_year
+        - Line = parse_code_from_blame
+        - If a in blame_by_author_obj keys
+            - blame_by_author_obj[a][‘num_lines_contributed’][year] ++
+            - Check year as well
+            - If line.startswith(‘//‘)
+                - Increment num lines commented code
+            - else
+                - Increment num lines code
+        - Else
+            - blame_by_author_obj[a] = {num_lines_contributed: {year: 1}}
+- expert_score_by_author_obj = {}
+- Loop through each author: for a in authors
+    - Score = Run heuristic on all stats in stats_by_author
+    - expert_score_by_author_obj[a] = score
+- Sort logs_by_author_obj by score (i.e., value)

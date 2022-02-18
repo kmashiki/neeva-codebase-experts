@@ -6,8 +6,6 @@ from helpers import (
     setup
 )
 
-GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
-
 #########################
 ########## CLI ##########
 #########################

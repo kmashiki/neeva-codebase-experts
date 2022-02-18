@@ -1,6 +1,8 @@
 import os
 from collections import OrderedDict
 
+GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
+
 ######################################
 ########## Helper Functions ##########
 ######################################

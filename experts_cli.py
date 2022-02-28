@@ -3,7 +3,8 @@ import json
 
 from experts_calculator import ExpertCalculator
 from helpers import (
-    setup
+    setup,
+    parse_git_repo_name_from_git_url
 )
 
 #########################
@@ -11,6 +12,7 @@ from helpers import (
 #########################
 
 @click.command()
+@click.option('--github-url', '-g', default='https://github.com/golang/go.git', help='GitHub directory URL')
 @click.option('--directory', '-d', help='Directory name, relative to the root of the Go source git tree')
 @click.option('--print-logs', '-p', is_flag=True, help='Print logs (aka debug mode)')
 @click.option('--num-experts', '-n', default=3, help='Number of experts to show')
@@ -21,18 +23,20 @@ from helpers import (
 )
 @click.option('--ranking1_config', '-r1', default='ranking_configs/default_ranking_config.json', help="First set of constants to be used in ranking function")
 @click.option('--ranking2_config', '-r2', default='ranking_configs/default_ranking_config.json', help="Second set of constants to be used in ranking function")
-def expert_cli(directory, print_logs, num_experts, action, ranking1_config, ranking2_config):
+def expert_cli(github_url, directory, print_logs, num_experts, action, ranking1_config, ranking2_config):
     """
     CLI to implement the Expert feature for Github. Given a git repository,
     determines the top 3 experts for a given directory within the Golang git repo.
     """
 
+    git_repo_name = parse_git_repo_name_from_git_url(github_url)
+    setup(git_repo_name, github_url)
+
     if action=='calculate':
         with open(ranking1_config) as config_file:
             constants = json.load(config_file)
 
-        setup()
-        ec = ExpertCalculator(directory, print_logs, num_experts, constants, ranking1_config)
+        ec = ExpertCalculator(directory, git_repo_name, print_logs, num_experts, constants, ranking1_config, 1)
         expert_scores = run_expert_calculator(ec)
         ec.print_expert_scores(expert_scores)
     elif action=='compare':
@@ -42,14 +46,12 @@ def expert_cli(directory, print_logs, num_experts, action, ranking1_config, rank
         with open(ranking2_config) as config_file2:
             constants2 = json.load(config_file2)
 
-        setup()
-
         print(f'\nRunning expert calculator on {ranking1_config}')
-        ec1 = ExpertCalculator(directory, print_logs, num_experts, constants1, ranking1_config)
+        ec1 = ExpertCalculator(directory, git_repo_name, print_logs, num_experts, constants1, ranking1_config, 1)
         expert_scores1 = run_expert_calculator(ec1)
 
         print(f'\nRunning expert calculator on {ranking2_config}')
-        ec2 = ExpertCalculator(directory, print_logs, num_experts, constants2, ranking2_config)
+        ec2 = ExpertCalculator(directory, git_repo_name, print_logs, num_experts, constants2, ranking2_config, 2)
         expert_scores2 = run_expert_calculator(ec2)
 
         ec1.print_expert_scores(expert_scores1)

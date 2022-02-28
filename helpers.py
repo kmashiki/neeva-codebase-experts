@@ -1,8 +1,6 @@
 import os
 from collections import OrderedDict
 
-GOLANG_GIT_REPO = 'https://github.com/golang/go.git'
-
 ######################################
 ########## Helper Functions ##########
 ######################################
@@ -38,7 +36,7 @@ def parse_log_value(line, substring):
     """
     return line[len(substring):].strip()
 
-def get_files_in_directory(directory):
+def get_files_in_directory(git_repo_name, directory):
     """
     Crawls through a directory to find all files in subdirectories
 
@@ -46,10 +44,11 @@ def get_files_in_directory(directory):
     returns [String]
     """
     files_in_dir = []
+    repo_name_length = len(git_repo_name)
 
-    for r, d, f in os.walk('go/' + directory):
+    for r, d, f in os.walk(f'{git_repo_name}/{directory}'):
         for item in f:
-            files_in_dir.append(os.path.join(r, item)[3:])
+            files_in_dir.append(os.path.join(r, item)[repo_name_length + 1:])
     
     return files_in_dir
 
@@ -73,6 +72,8 @@ def parse_year(line):
     line: String
     returns String
     """
+    greater_than_index = line.find(">")
+    line = line[greater_than_index + 1:]
     dash_index = line.find('-')
     return line[: dash_index][-4:]
 
@@ -83,6 +84,9 @@ def normalize_dictionary(dictionary):
     dictionary: Object {key: raw value}
     returns Object {key: normalized value}
     """
+    if sum(dictionary.values()) == 0:
+        return {}
+
     factor = 1.0 / sum(dictionary.values())
     for k, v in dictionary.items():
         dictionary[k] = v * factor
@@ -122,7 +126,7 @@ def mkdir_not_exists(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
     
-def setup():
+def setup(git_repo_name, github_directory):
     """
     Makes a directory to store parsed files and clones go repo if it does not already exist
 
@@ -132,5 +136,17 @@ def setup():
     """
     mkdir_not_exists('parsed_files')
     os.system('rm -f outputs.txt')
-    if not os.path.exists('go'):
-        os.system(f'git clone {GOLANG_GIT_REPO}')
+    os.system('rm -f score_breakdown_1.txt')
+    os.system('rm -f score_breakdown_2.txt')
+    os.system('touch score_breakdown_1.txt')
+    os.system('touch score_breakdown_2.txt')
+
+    if not os.path.exists(git_repo_name):
+        os.system(f'git clone {github_directory}')
+
+def parse_git_repo_name_from_git_url(github_url):
+    tmp_directory = github_url
+    index = tmp_directory.rfind('/')
+    tmp_directory = tmp_directory[index+1:]
+    index = tmp_directory.rfind('.')
+    return tmp_directory[:index]

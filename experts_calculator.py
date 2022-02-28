@@ -17,12 +17,14 @@ from helpers import (
 )
 
 class ExpertCalculator:
-    def __init__(self, directory, print_logs, num_experts, ranking_constants, ranking_constants_file_name):
+    def __init__(self, directory, git_repo_name, print_logs, num_experts, ranking_constants, ranking_constants_file_name, ranking_number):
         self.directory = directory
+        self.git_repo_name = git_repo_name
         self.print_logs = print_logs
         self.num_experts = num_experts
         self.ranking_constants = ranking_constants
         self.ranking_constants_file_name = ranking_constants_file_name
+        self.ranking_number = ranking_number
 
 
     #############################################
@@ -36,14 +38,17 @@ class ExpertCalculator:
 
         returns Object {author_email: {contribution_type: {year: int}}}
         """
-        files_in_dir = get_files_in_directory(self.directory)
+        if self.print_logs:
+            print('Getting current contributions per author...')
+
+        files_in_dir = get_files_in_directory(self.git_repo_name, self.directory)
 
         for f in files_in_dir:
             formatted_file_name = path_to_filename(f)
             file_name = f'parsed_files/{formatted_file_name}_blame.txt'
             os.system(f'touch {file_name}')
 
-            cmd = f'cd go && git --no-pager blame -e {f} > ../{file_name}'
+            cmd = f'cd {self.git_repo_name} && git --no-pager blame -e {f} > ../{file_name}'
             os.system(cmd)
 
         blame_by_author_obj = {}
@@ -120,7 +125,7 @@ class ExpertCalculator:
         # store authors in text file
         author_file_name = 'parsed_files/authors.txt'
         os.system(f'touch {author_file_name}')
-        cmd = f'cd go && git --no-pager shortlog -s -n -e --all --no-merges {self.directory} > ../{author_file_name}'
+        cmd = f'cd {self.git_repo_name} && git --no-pager shortlog -s -n -e --all --no-merges {self.directory} > ../{author_file_name}'
         os.system(cmd)
 
         # parse authors from text file to array
@@ -152,7 +157,7 @@ class ExpertCalculator:
             # store authors' commit history in temp text file
             author_file_name = 'parsed_files/author_log.txt'
             os.system(f'touch {author_file_name}')
-            cmd = f'cd go && git --no-pager log --stat --author={a} {self.directory} > ../{author_file_name}'
+            cmd = f'cd {self.git_repo_name} && git --no-pager log --stat --author={a} {self.directory} > ../{author_file_name}'
             os.system(cmd)
 
             current_author_commits = self.parse_log_text_to_object(a)
@@ -258,6 +263,12 @@ class ExpertCalculator:
             final_blame_score_by_author[a] = self.ranking_constants['LINES_CONTRIBUTED_SCALAR'] * percent_lines_contributed_by_author_stats.get(a, 0) + \
                                                 self.ranking_constants['BLAME_CODE_SCORE_SCALAR'] * score_current_code_by_author_and_recency.get(a, 0) + \
                                                 self.ranking_constants['FILES_TOUCHED_SCALAR'] * percent_files_touched_by_author.get(a, 0)
+            
+            with open(f'score_breakdown_{self.ranking_number}.txt', 'a') as file:
+                # file.write(self.ranking_constants_file_name)
+                file.write(f"{a}: LINES_CONTRIBUTED_SCALAR = {self.ranking_constants['LINES_CONTRIBUTED_SCALAR'] * percent_lines_contributed_by_author_stats.get(a, 0)}\n")
+                file.write(f"{a}: BLAME_CODE_SCORE_SCALAR = {self.ranking_constants['BLAME_CODE_SCORE_SCALAR'] * score_current_code_by_author_and_recency.get(a, 0)}\n")
+                file.write(f"{a}: FILES_TOUCHED_SCALAR = {self.ranking_constants['FILES_TOUCHED_SCALAR'] * percent_files_touched_by_author.get(a, 0)}\n")
 
         return final_blame_score_by_author
 
@@ -314,7 +325,7 @@ class ExpertCalculator:
         returns Object {author_email: float}
         """
         percent_files_touched_by_author = {}
-        num_files_in_dir = float(len(get_files_in_directory(self.directory)))
+        num_files_in_dir = float(len(get_files_in_directory(self.git_repo_name, self.directory)))
         for a, obj in blame_by_author_obj.items():
             percent_files_touched_by_author[a] = len(obj['files_touched']) / num_files_in_dir
         
@@ -407,6 +418,12 @@ class ExpertCalculator:
             final_log_score_by_author[a] = self.ranking_constants['NUM_COMMMITS_SCALAR'] * normalized_num_commits_by_author.get(a, 0) + \
                                            self.ranking_constants['LOG_CODE_SCORE_SCALAR'] *  normalized_log_code_score_by_author.get(a, 0) + \
                                            self.ranking_constants['NUM_REVIEWS_SCALAR'] * normalized_num_reviews_by_author.get(a, 0)
+            
+            with open(f'score_breakdown_{self.ranking_number}.txt', 'a') as file:
+                # file.write(self.ranking_constants_file_name)
+                file.write(f"{a}: NUM_COMMMITS_SCALAR = {self.ranking_constants['NUM_COMMMITS_SCALAR'] * normalized_num_commits_by_author.get(a, 0)}\n")
+                file.write(f"{a}: LOG_CODE_SCORE_SCALAR = {self.ranking_constants['LOG_CODE_SCORE_SCALAR'] * normalized_log_code_score_by_author.get(a, 0)}\n")
+                file.write(f"{a}: NUM_REVIEWS_SCALAR = {self.ranking_constants['NUM_REVIEWS_SCALAR'] * normalized_num_reviews_by_author.get(a, 0)}\n")
 
         return final_log_score_by_author
     
@@ -426,8 +443,7 @@ class ExpertCalculator:
 
             recent_commit_counter = 0
             for s in stats_arr:
-
-                if s['commit_date'] < datetime.now() - timedelta(days = 365):
+                if 'commit_date' in s.keys() and s['commit_date'] < datetime.now() - timedelta(days = 365):
                     recent_commit_counter += 1
             
             num_commits_by_author_last_12_months[a] = recent_commit_counter
@@ -494,6 +510,11 @@ class ExpertCalculator:
         score_by_author = {}
         for a in list(set().union(final_blame_score_by_author.keys(), final_log_score_by_author.keys())):
             score_by_author[a] = (self.ranking_constants['BLAME_SCALAR'] * final_blame_score_by_author.get(a, 0)) + (self.ranking_constants['LOG_SCALAR'] * final_log_score_by_author.get(a, 0))
+
+            with open(f'score_breakdown_{self.ranking_number}.txt', 'a') as file:
+                # file.write(self.ranking_constants_file_name)
+                file.write(f"{a}: BLAME_SCALAR = {self.ranking_constants['BLAME_SCALAR'] * final_blame_score_by_author.get(a, 0)}\n")
+                file.write(f"{a}: LOG_SCALAR = {self.ranking_constants['LOG_SCALAR'] * final_log_score_by_author.get(a, 0)}\n")
         
         score_by_author = sort_dict_by_value(score_by_author)
 
